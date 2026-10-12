@@ -1,31 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-       <style>
-    /* 强制重置与放大移动端底部导航栏 */
-    nav.fixed.bottom-0 {
-        height: 3.8rem !important; /* 增加导航栏整体高度 */
-        padding-bottom: env(safe-area-inset-bottom) !important; /* 适配 iPhone 底部黑条，防止贴底 */
-        display: flex !important;
-        align-items: center !important;
-        justify-content: space-around !important;
-    }
-
-    /* 放大导航栏内部的按钮和文字 */
-    nav.fixed.bottom-0 a {
-        flex: 1 !important;
-        height: 100% !important;
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: center !important;
-        justify-content: center !important;
-        font-size: 0.85rem !important; /* 放大文字 */
-        font-weight: 600 !important;
-    }
-
-    /* 增加页面底部留白，防止加高后的导航遮挡内容 */
-    body {
-        padding-bottom: calc(4.5rem + env(safe-area-inset-bottom)) !important;
-    }
+    
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
