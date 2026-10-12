@@ -1,0 +1,538 @@
+trade.html<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>模拟交易所 - 专业交易大厅</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        okxGreen: '#00b07c',
+                        okxRed: '#f14668',
+                        okxDark: '#12181f',
+                        okxCard: '#1e2631',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-okxDark text-gray-200 font-sans pb-24">
+
+    <!-- 顶栏：内置 Top 20 币种快捷切换下拉菜单、多货币、时区与语言切换 -->
+    <header class="flex justify-between items-center p-3 bg-okxCard border-b border-gray-800 sticky top-0 z-50">
+        <div class="flex items-center space-x-1.5">
+            <!-- 币种快捷切换下拉框 -->
+            <select id="symbol-select" onchange="switchSymbol(this.value)" class="bg-gray-900 border border-gray-700 text-white font-bold text-sm rounded px-2 py-1 focus:outline-none">
+                <!-- 动态由JS填充 Top 20 选项 -->
+            </select>
+            <span class="text-[10px] bg-okxGreen/20 text-okxGreen px-1.5 py-0.5 rounded" data-i18n="tag-sim">模拟</span>
+        </div>
+        <div class="flex items-center space-x-1.5">
+            <select id="currency-select" onchange="changeValCurrency(this.value)" class="bg-gray-900 border border-gray-700 text-gray-200 text-xs rounded px-1.5 py-1 focus:outline-none">
+                <option value="USDT">USDT</option>
+                <option value="USD">USD ($)</option>
+                <option value="CNY">CNY (¥)</option>
+                <option value="HKD">HKD (HK$)</option>
+                <option value="BTC">BTC (₿)</option>
+            </select>
+            <span id="live-time" class="text-[10px] text-gray-400">00:00:00</span>
+            <select id="lang-select" onchange="changeLanguage(this.value)" class="bg-gray-900 border border-gray-700 text-gray-200 text-xs rounded px-1.5 py-1 focus:outline-none">
+                <option value="zh-CN">简体</option>
+                <option value="en-US">En</option>
+                <option value="zh-HK">繁體</option>
+            </select>
+        </div>
+    </header>
+
+    <!-- 交易模式切换一级导航栏 -->
+    <div class="bg-okxCard px-3 py-2 border-b border-gray-800 flex space-x-4 text-xs font-bold overflow-x-auto">
+        <button onclick="switchMode('spot')" id="mode-spot-btn" class="text-okxGreen border-b-2 border-okxGreen pb-1 whitespace-nowrap" data-i18n="mode-spot">现货</button>
+        <button onclick="switchMode('futures')" id="mode-futures-btn" class="text-gray-400 pb-1 whitespace-nowrap" data-i18n="mode-futures">永续合约</button>
+        <button onclick="switchMode('options')" id="mode-options-btn" class="text-gray-400 pb-1 whitespace-nowrap" data-i18n="mode-options">期权</button>
+        <button onclick="switchMode('bot')" id="mode-bot-btn" class="text-gray-400 pb-1 whitespace-nowrap" data-i18n="mode-bot">量化机器人</button>
+    </div>
+
+    <!-- 实时价格横幅 -->
+    <div class="px-3 py-2 bg-okxCard/50 border-b border-gray-800 flex justify-between items-center text-xs">
+        <span class="text-gray-400" data-i18n="live-price-label">最新成交价</span>
+        <span class="text-okxGreen font-bold text-base" id="live-price">0.00</span>
+    </div>
+
+    <!-- K线图容器 -->
+    <div class="px-2 pt-2">
+        <div class="bg-okxCard rounded p-2 border border-gray-800">
+            <div class="text-[10px] text-gray-400 mb-1 flex justify-between">
+                <span id="chart-title-text">1分钟K线</span>
+                <span class="text-okxGreen flex items-center"><span class="w-2 h-2 rounded-full bg-okxGreen inline-block mr-1 animate-pulse"></span> <span data-i18n="chart-status">运行流畅</span></span>
+            </div>
+            <div id="chart-container" style="width: 100%; height: 160px; position: relative;"></div>
+        </div>
+    </div>
+
+    <!-- 动态交易面板区 -->
+    <div class="grid grid-cols-2 gap-2 p-3" id="trading-panel-area"></div>
+
+    <!-- 订单与持仓列表 -->
+    <div class="px-3 pt-1">
+        <div class="bg-okxCard rounded-lg p-3 border border-gray-800">
+            <div class="flex border-b border-gray-800 pb-2 mb-2 text-xs font-bold">
+                <span class="text-white mr-4 cursor-pointer border-b-2 border-okxGreen pb-1" data-i18n="orders-title">当前持仓与历史订单</span>
+            </div>
+            <div id="orders-list" class="space-y-2 max-h-36 overflow-y-auto text-xs">
+                <div class="text-gray-500 text-center py-4" data-i18n="orders-empty">暂无交易订单，快去上方尝试下单吧！</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 底部导航栏 -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-okxCard border-t border-gray-800 flex justify-around py-2 z-50">
+        <a href="./market.html" class="text-gray-400 text-xs flex flex-col items-center" data-i18n="nav-market">行情</a>
+        <a href="./trade.html?symbol=BTC" class="text-okxGreen text-xs flex flex-col items-center font-bold" id="nav-trade-link" data-i18n="nav-trade">交易</a>
+        <a href="./assets.html" class="text-gray-400 text-xs flex flex-col items-center" data-i18n="nav-assets">资产</a>
+    </nav>
+
+    <script>
+        // 欧意 Top 20 币种及基准价格字典
+        const basePrices = {
+            'BTC': 83350.00, 'ETH': 3120.50, 'SOL': 185.20, 'XRP': 0.6250, 'DOGE': 0.1680,
+            'ADA': 0.4520, 'TRX': 0.1240, 'AVAX': 32.50, 'LINK': 14.80, 'SUI': 1.95,
+            'SHIB': 0.000022, 'BCH': 380.00, 'DOT': 7.20, 'NEAR': 5.60, 'LTC': 82.40,
+            'UNI': 8.90, 'APT': 9.50, 'PEPE': 0.000012, 'ICP': 9.20, 'RENDER': 7.80
+        };
+
+        const urlParams = new URLSearchParams(window.location.search);
+        let currentSymbol = (urlParams.get('symbol') || 'BTC').toUpperCase();
+        if (!basePrices[currentSymbol]) currentSymbol = 'BTC';
+
+        // 初始化顶部下拉菜单选项
+        const symbolSelect = document.getElementById('symbol-select');
+        Object.keys(basePrices).forEach(sym => {
+            const opt = document.createElement('option');
+            opt.value = sym;
+            opt.innerText = `${sym}/USDT`;
+            if (sym === currentSymbol) opt.selected = true;
+            symbolSelect.appendChild(opt);
+        });
+
+        function switchSymbol(newSym) {
+            window.location.href = `./trade.html?symbol=${newSym}`;
+        }
+
+        let currentCoinPrice = basePrices[currentSymbol] || 100.00;
+        let currentTradeMode = 'spot'; 
+        let spotOrderType = 'limit'; 
+        let selectedLeverage = 20;   
+        let selectedOptionType = 'CALL'; 
+
+        document.getElementById('chart-title-text').innerText = `${currentSymbol}/USDT 1分钟K线`;
+        document.getElementById('nav-trade-link').href = `./trade.html?symbol=${currentSymbol}`;
+
+        const i18nData = {
+            'zh-CN': {
+                'tag-sim': '模拟', 'live-price-label': '最新成交价', 'chart-status': '运行流畅',
+                'mode-spot': '现货', 'mode-futures': '永续合约', 'mode-options': '期权', 'mode-bot': '量化机器人',
+                'orders-title': '当前持仓与历史订单', 'orders-empty': '暂无交易订单，快去上方尝试下单吧！',
+                'nav-market': '行情', 'nav-trade': '交易', 'nav-assets': '资产', 'timeZone': 'Asia/Shanghai'
+            },
+            'en-US': {
+                'tag-sim': 'Sim', 'live-price-label': 'Latest Price', 'chart-status': 'Running Smooth',
+                'mode-spot': 'Spot', 'mode-futures': 'Futures', 'mode-options': 'Options', 'mode-bot': 'Trading Bot',
+                'orders-title': 'Positions & Orders', 'orders-empty': 'No active orders, start trading above!',
+                'nav-market': 'Market', 'nav-trade': 'Trade', 'nav-assets': 'Assets', 'timeZone': 'America/New_York'
+            },
+            'zh-HK': {
+                'tag-sim': '模擬', 'live-price-label': '最新成交價', 'chart-status': '運行流暢',
+                'mode-spot': '現貨', 'mode-futures': '永續合約', 'mode-options': '期權', 'mode-bot': '量化機器人',
+                'orders-title': '當前持倉與歷史訂單', 'orders-empty': '暫無交易訂單，快去上方嘗試下單吧！',
+                'nav-market': '行情', 'nav-trade': '交易', 'nav-assets': '資產', 'timeZone': 'Asia/Hong_Kong'
+            }
+        };
+
+        let currentLang = localStorage.getItem('exchange_lang') || 'zh-CN';
+        let currentCurrency = localStorage.getItem('exchange_currency') || 'USDT';
+        document.getElementById('lang-select').value = currentLang;
+        document.getElementById('currency-select').value = currentCurrency;
+
+        function changeLanguage(lang) {
+            currentLang = lang;
+            localStorage.setItem('exchange_lang', lang);
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (i18nData[currentLang][key]) el.innerText = i18nData[currentLang][key];
+            });
+            renderOrders();
+        }
+        changeLanguage(currentLang);
+
+        function changeValCurrency(curr) {
+            currentCurrency = curr;
+            localStorage.setItem('exchange_currency', curr);
+        }
+
+        function updateLocalizedTime() {
+            const timeZone = i18nData[currentLang].timeZone || 'Asia/Shanghai';
+            const timeStr = new Intl.DateTimeFormat('en-GB', { timeZone, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).format(new Date());
+            document.getElementById('live-time').innerText = `${timeStr} (${currentLang.split('-')[1]})`;
+        }
+        setInterval(updateLocalizedTime, 1000);
+        updateLocalizedTime();
+
+        function switchMode(mode) {
+            currentTradeMode = mode;
+            ['spot', 'futures', 'options', 'bot'].forEach(m => {
+                const btn = document.getElementById(`mode-${m}-btn`);
+                if (m === mode) {
+                    btn.className = "text-okxGreen border-b-2 border-okxGreen pb-1 whitespace-nowrap font-bold";
+                } else {
+                    btn.className = "text-gray-400 pb-1 whitespace-nowrap font-normal";
+                }
+            });
+            renderTradingPanel();
+        }
+
+        function renderTradingPanel() {
+            const area = document.getElementById('trading-panel-area');
+            const pStr = currentCoinPrice < 1 ? currentCoinPrice.toFixed(6) : currentCoinPrice.toFixed(2);
+            const offset = currentCoinPrice * 0.0002;
+
+            if (currentTradeMode === 'spot') {
+                area.innerHTML = `
+                    <div class="bg-okxCard p-2 rounded text-xs">
+                        <div class="flex justify-between mb-2">
+                            <button onclick="setSpotType('limit')" class="px-2 py-0.5 rounded ${spotOrderType==='limit'?'bg-gray-700 text-white':'text-gray-400'}">限价单</button>
+                            <button onclick="setSpotType('market')" class="px-2 py-0.5 rounded ${spotOrderType==='market'?'bg-gray-700 text-white':'text-gray-400'}">市价单</button>
+                        </div>
+                        <div class="text-gray-400 mb-1 flex justify-between"><span>价格(USDT)</span><span>数量</span></div>
+                        <div class="space-y-1 text-okxRed">
+                            <div class="flex justify-between"><span>${(currentCoinPrice + offset*2).toFixed(currentCoinPrice<1?6:2)}</span><span>0.51</span></div>
+                            <div class="flex justify-between"><span>${(currentCoinPrice + offset).toFixed(currentCoinPrice<1?6:2)}</span><span>1.20</span></div>
+                        </div>
+                        <div class="text-center py-2 text-base font-bold text-okxGreen my-1 border-y border-gray-700">${pStr}</div>
+                        <div class="space-y-1 text-okxGreen">
+                            <div class="flex justify-between"><span>${(currentCoinPrice - offset).toFixed(currentCoinPrice<1?6:2)}</span><span>0.85</span></div>
+                            <div class="flex justify-between"><span>${(currentCoinPrice - offset*2).toFixed(currentCoinPrice<1?6:2)}</span><span>2.10</span></div>
+                        </div>
+                    </div>
+                    <div class="bg-okxCard p-2 rounded flex flex-col justify-between">
+                        <div class="space-y-2">
+                            ${spotOrderType === 'limit' ? `
+                                <div>
+                                    <label class="text-[10px] text-gray-400">委托价格 (USDT)</label>
+                                    <input type="text" id="spot-price-input" value="${pStr}" class="w-full bg-gray-900 border border-gray-700 rounded p-1 text-xs text-white">
+                                </div>
+                            ` : `
+                                <div class="text-[10px] text-okxGreen bg-okxGreen/10 p-2 rounded text-center">以当前最优市场价格秒速成交</div>
+                            `}
+                            <div>
+                                <label class="text-[10px] text-gray-400">数量 (${currentSymbol})</label>
+                                <input type="text" id="spot-amount-input" placeholder="1.0" class="w-full bg-gray-900 border border-gray-700 rounded p-1 text-xs text-white">
+                            </div>
+                        </div>
+                        <button onclick="executeSpotTrade()" class="w-full bg-okxGreen text-white py-2 rounded text-xs font-bold mt-3">现货买入 ${currentSymbol}</button>
+                    </div>
+                `;
+            } else if (currentTradeMode === 'futures') {
+                area.innerHTML = `
+                    <div class="bg-okxCard p-2 rounded text-xs">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-gray-400">合约杠杆</span>
+                            <span class="text-okxGreen font-bold">${selectedLeverage}x</span>
+                        </div>
+                        <input type="range" min="1" max="125" value="${selectedLeverage}" oninput="setLev(this.value)" class="w-full accent-okxGreen mb-2">
+                        <div class="flex justify-between text-[10px] text-gray-400"><span>1x</span><span>50x</span><span>125x</span></div>
+                        <div class="mt-3 p-1.5 bg-gray-900 rounded border border-gray-800 text-[10px] space-y-1">
+                            <div class="flex justify-between text-gray-400"><span>标记价格:</span><span class="text-white">${pStr}</span></div>
+                        </div>
+                    </div>
+                    <div class="bg-okxCard p-2 rounded flex flex-col justify-between">
+                        <div>
+                            <label class="text-[10px] text-gray-400">开仓数量 (${currentSymbol})</label>
+                            <input type="text" id="futures-amount-input" placeholder="1.0" class="w-full bg-gray-900 border border-gray-700 rounded p-1 text-xs text-white my-1">
+                        </div>
+                        <div class="grid grid-cols-2 gap-1 mt-2">
+                            <button onclick="executeFuturesTrade('LONG')" class="bg-okxGreen text-white py-2 rounded text-xs font-bold">做多 (Long)</button>
+                            <button onclick="executeFuturesTrade('SHORT')" class="bg-okxRed text-white py-2 rounded text-xs font-bold">做空 (Short)</button>
+                        </div>
+                    </div>
+                `;
+            } else if (currentTradeMode === 'options') {
+                area.innerHTML = `
+                    <div class="bg-okxCard p-2 rounded text-xs space-y-2">
+                        <div class="flex space-x-1">
+                            <button onclick="setOpt('CALL')" class="flex-1 py-1 rounded ${selectedOptionType==='CALL'?'bg-okxGreen text-white':'bg-gray-800 text-gray-400'}">看涨 (CALL)</button>
+                            <button onclick="setOpt('PUT')" class="flex-1 py-1 rounded ${selectedOptionType==='PUT'?'bg-okxRed text-white':'bg-gray-800 text-gray-400'}">看跌 (PUT)</button>
+                        </div>
+                        <div class="text-[10px] text-gray-400 flex justify-between"><span>行权价:</span><span class="text-white">${(currentCoinPrice*1.05).toFixed(2)} USDT</span></div>
+                    </div>
+                    <div class="bg-okxCard p-2 rounded flex flex-col justify-between">
+                        <div>
+                            <label class="text-[10px] text-gray-400">权利金本金 (USDT)</label>
+                            <input type="text" id="option-amount-input" placeholder="100" class="w-full bg-gray-900 border border-gray-700 rounded p-1 text-xs text-white my-1">
+                        </div>
+                        <button onclick="executeOptionTrade()" class="w-full bg-blue-600 text-white py-2 rounded text-xs font-bold mt-2">申购期权</button>
+                    </div>
+                `;
+            } else if (currentTradeMode === 'bot') {
+                area.innerHTML = `
+                    <div class="bg-okxCard p-2 rounded text-xs space-y-1.5">
+                        <div class="font-bold text-white mb-1">AI 网格策略 (${currentSymbol})</div>
+                        <div class="flex justify-between text-gray-400"><span>区间:</span><span class="text-white">${(currentCoinPrice*0.8).toFixed(2)} - ${(currentCoinPrice*1.2).toFixed(2)}</span></div>
+                        <div class="flex justify-between text-gray-400"><span>网格数:</span><span class="text-white">20 网格</span></div>
+                    </div>
+                    <div class="bg-okxCard p-2 rounded flex flex-col justify-between">
+                        <div>
+                            <label class="text-[10px] text-gray-400">投入本金 (USDT)</label>
+                            <input type="text" id="bot-amount-input" placeholder="1000" class="w-full bg-gray-900 border border-gray-700 rounded p-1 text-xs text-white my-1">
+                        </div>
+                        <button onclick="executeBotTrade()" class="w-full bg-purple-600 text-white py-2 rounded text-xs font-bold mt-2">启动机器人</button>
+                    </div>
+                `;
+            }
+        }
+
+        function setSpotType(t) { spotOrderType = t; renderTradingPanel(); }
+        function setLev(l) { selectedLeverage = parseInt(l); renderTradingPanel(); }
+        function setOpt(o) { selectedOptionType = o; renderTradingPanel(); }
+
+        // --- K线图与行情渲染 ---
+        let chart, candlestickSeries, lastBar;
+
+        window.onload = function() {
+            const chartContainer = document.getElementById('chart-container');
+            chart = LightweightCharts.createChart(chartContainer, {
+                width: chartContainer.clientWidth || 350,
+                height: 160,
+                layout: { background: { type: 'solid', color: '#1e2631' }, textColor: '#9ca3af' },
+                grid: { vertLines: { color: '#2a3441' }, horzLines: { color: '#2a3441' } },
+                timeScale: { timeVisible: true, secondsVisible: true, borderColor: '#2a3441' },
+                rightPriceScale: { borderColor: '#2a3441' }
+            });
+
+            candlestickSeries = chart.addCandlestickSeries({
+                upColor: '#00b07c', downColor: '#f14668', borderVisible: false,
+                wickUpColor: '#00b07c', wickDownColor: '#f14668',
+            });
+
+            let now = Math.floor(Date.now() / 1000) - 30 * 60;
+            let initialData = [];
+            let p = currentCoinPrice * 0.995;
+            for (let i = 0; i < 30; i++) {
+                let open = p;
+                let close = open + (Math.random() - 0.49) * (currentCoinPrice * 0.002);
+                let high = Math.max(open, close) + Math.random() * (currentCoinPrice * 0.001);
+                let low = Math.min(open, close) - Math.random() * (currentCoinPrice * 0.001);
+                initialData.push({ time: now + i * 60, open, high, low, close });
+                p = close;
+            }
+            candlestickSeries.setData(initialData);
+            chart.timeScale().fitContent();
+            currentCoinPrice = p;
+            lastBar = initialData[initialData.length - 1];
+
+            renderTradingPanel();
+            setInterval(updateSmoothPrice, 1000);
+            renderOrders();
+        };
+
+        function updateSmoothPrice() {
+            if (!chart || !candlestickSeries) return;
+            const step = currentCoinPrice * 0.0005;
+            currentCoinPrice += (Math.random() - 0.49) * step;
+            const priceStr = currentCoinPrice < 1 ? currentCoinPrice.toFixed(6) : currentCoinPrice.toFixed(2);
+
+            document.getElementById('live-price').innerText = priceStr;
+            const priceInput = document.getElementById('spot-price-input');
+            if (priceInput && spotOrderType === 'limit') priceInput.value = priceStr;
+
+            const currentMinute = Math.floor(Date.now() / 1000 / 60) * 60;
+            if (lastBar.time === currentMinute) {
+                if (currentCoinPrice > lastBar.high) lastBar.high = currentCoinPrice;
+                if (currentCoinPrice < lastBar.low) lastBar.low = currentCoinPrice;
+                lastBar.close = currentCoinPrice;
+            } else {
+                lastBar = { time: currentMinute, open: currentCoinPrice, high: currentCoinPrice, low: currentCoinPrice, close: currentCoinPrice };
+            }
+            candlestickSeries.update(lastBar);
+            updateOrdersPL();
+        }
+
+        // --- 订单与日志管理 ---
+        function getOrders() {
+            let allOrders = JSON.parse(localStorage.getItem('user_orders')) || {};
+            return allOrders[currentSymbol] || [];
+        }
+
+        function saveOrders(orders) {
+            let allOrders = JSON.parse(localStorage.getItem('user_orders')) || {};
+            allOrders[currentSymbol] = orders;
+            localStorage.setItem('user_orders', JSON.stringify(allOrders));
+        }
+
+        function logHistory(action, detail) {
+            let logs = JSON.parse(localStorage.getItem('user_history_logs')) || [];
+            logs.unshift({ action, detail, time: new Date().toLocaleString() });
+            localStorage.setItem('user_history_logs', JSON.stringify(logs));
+        }
+
+        function renderOrders() {
+            const orders = getOrders();
+            const container = document.getElementById('orders-list');
+            if (!container) return;
+
+            if (orders.length === 0) {
+                container.innerHTML = `<div class="text-gray-500 text-center py-4">暂无交易订单，快去上方尝试下单吧！</div>`;
+                return;
+            }
+
+            container.innerHTML = '';
+            orders.slice().reverse().forEach((order, index) => {
+                const actualIndex = orders.length - 1 - index;
+                container.innerHTML += `
+                    <div class="bg-gray-900 p-2 rounded border border-gray-800 flex justify-between items-center">
+                        <div>
+                            <div class="flex items-center space-x-1">
+                                <span class="text-okxGreen font-bold">[${order.mode.toUpperCase()}] ${currentSymbol}</span>
+                                <span class="text-[10px] text-gray-500">${order.time}</span>
+                            </div>
+                            <div class="text-gray-400 mt-0.5">价格: ${order.price.toFixed(order.price < 1 ? 6 : 2)} | 数量: ${order.amount}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-bold" id="pl-${actualIndex}">--</div>
+                            <button onclick="closeOrder(${actualIndex})" class="mt-1 bg-red-500/20 text-okxRed px-2 py-0.5 rounded text-[10px]">平仓</button>
+                        </div>
+                    </div>
+                `;
+            });
+            updateOrdersPL();
+        }
+
+        function updateOrdersPL() {
+            const orders = getOrders();
+            orders.forEach((order, index) => {
+                const plEl = document.getElementById(`pl-${index}`);
+                if (plEl) {
+                    let diff = 0;
+                    if (order.mode === 'futures' && order.type === 'SHORT') {
+                        diff = (order.price - currentCoinPrice) * order.amount * order.lev;
+                    } else if (order.mode === 'futures') {
+                        diff = (currentCoinPrice - order.price) * order.amount * order.lev;
+                    } else if (order.mode === 'spot') {
+                        diff = (currentCoinPrice - order.price) * order.amount;
+                    } else {
+                        diff = order.amount * 0.05 * (Math.random() + 0.2);
+                    }
+                    const percent = (diff / (order.price * order.amount)) * 100 * (order.lev || 1);
+                    const sign = diff >= 0 ? '+' : '';
+                    plEl.innerText = `${sign}${diff.toFixed(2)} (${sign}${percent.toFixed(1)}%)`;
+                    plEl.className = diff >= 0 ? 'font-bold text-okxGreen' : 'font-bold text-okxRed';
+                }
+            });
+        }
+
+        function executeSpotTrade() {
+            const price = spotOrderType === 'limit' ? parseFloat(document.getElementById('spot-price-input').value) : currentCoinPrice;
+            const amount = parseFloat(document.getElementById('spot-amount-input').value);
+            if (isNaN(amount) || amount <= 0) { alert('请输入有效数量！'); return; }
+
+            const cost = price * amount;
+            let assets = JSON.parse(localStorage.getItem('user_assets')) || { usdt: 100000.00 };
+            if (assets.usdt < cost) { alert('USDT 余额不足！'); return; }
+
+            assets.usdt -= cost;
+            localStorage.setItem('user_assets', JSON.stringify(assets));
+
+            let orders = getOrders();
+            orders.push({ mode: 'spot', price, amount, time: new Date().toTimeString().substring(0, 8) });
+            saveOrders(orders);
+            logHistory(`现货买入 (${currentSymbol})`, `买入 ${amount} @ ${price.toFixed(2)} USDT`);
+
+            alert(`🎉 现货买入成功！`);
+            renderOrders();
+        }
+
+        function executeFuturesTrade(type) {
+            const amount = parseFloat(document.getElementById('futures-amount-input').value);
+            if (isNaN(amount) || amount <= 0) { alert('请输入有效数量！'); return; }
+
+            const margin = (currentCoinPrice * amount) / selectedLeverage;
+            let assets = JSON.parse(localStorage.getItem('user_assets')) || { usdt: 100000.00 };
+            if (assets.usdt < margin) { alert('保证金不足！'); return; }
+
+            assets.usdt -= margin;
+            localStorage.setItem('user_assets', JSON.stringify(assets));
+
+            let orders = getOrders();
+            orders.push({ mode: 'futures', type, price: currentCoinPrice, amount, lev: selectedLeverage, time: new Date().toTimeString().substring(0, 8) });
+            saveOrders(orders);
+            logHistory(`合约开仓 (${currentSymbol})`, `${type} ${selectedLeverage}x 数量:${amount}`);
+
+            alert(`🎉 合约开仓成功 (${type} ${selectedLeverage}x)！`);
+            renderOrders();
+        }
+
+        function executeOptionTrade() {
+            const premium = parseFloat(document.getElementById('option-amount-input').value);
+            if (isNaN(premium) || premium <= 0) { alert('请输入权利金！'); return; }
+
+            let assets = JSON.parse(localStorage.getItem('user_assets')) || { usdt: 100000.00 };
+            if (assets.usdt < premium) { alert('余额不足！'); return; }
+
+            assets.usdt -= premium;
+            localStorage.setItem('user_assets', JSON.stringify(assets));
+
+            let orders = getOrders();
+            orders.push({ mode: 'options', type: selectedOptionType, price: currentCoinPrice, amount: premium, time: new Date().toTimeString().substring(0, 8) });
+            saveOrders(orders);
+            logHistory(`期权申购 (${currentSymbol})`, `${selectedOptionType} 权利金:${premium} USDT`);
+
+            alert(`🎉 期权申购成功！`);
+            renderOrders();
+        }
+
+        function executeBotTrade() {
+            const fund = parseFloat(document.getElementById('bot-amount-input').value);
+            if (isNaN(fund) || fund <= 0) { alert('请输入本金！'); return; }
+
+            let assets = JSON.parse(localStorage.getItem('user_assets')) || { usdt: 100000.00 };
+            if (assets.usdt < fund) { alert('余额不足！'); return; }
+
+            assets.usdt -= fund;
+            localStorage.setItem('user_assets', JSON.stringify(assets));
+
+            let orders = getOrders();
+            orders.push({ mode: 'bot', type: 'GRID', price: currentCoinPrice, amount: fund, time: new Date().toTimeString().substring(0, 8) });
+            saveOrders(orders);
+            logHistory(`网格机器人 (${currentSymbol})`, `投入本金:${fund} USDT`);
+
+            alert(`🤖 量化网格机器人已启动！`);
+            renderOrders();
+        }
+
+        function closeOrder(index) {
+            let orders = getOrders();
+            let order = orders[index];
+            let assets = JSON.parse(localStorage.getItem('user_assets')) || { usdt: 100000.00 };
+
+            let returnUSDT = order.mode === 'spot' ? currentCoinPrice * order.amount : order.amount * 1.1;
+            assets.usdt += returnUSDT;
+            localStorage.setItem('user_assets', JSON.stringify(assets));
+
+            logHistory(`平仓结算 (${currentSymbol})`, `模式: ${order.mode.toUpperCase()}`);
+            orders.splice(index, 1);
+            saveOrders(orders);
+
+            alert(`✅ 平仓成功，资金已入账！`);
+            renderOrders();
+        }
+
+        window.addEventListener('resize', () => { 
+            if (chart) chart.applyOptions({ width: document.getElementById('chart-container').clientWidth }); 
+        });
+    </script>
+</body>
+</html>

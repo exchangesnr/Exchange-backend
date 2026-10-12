@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>交易所后台管理系统 - Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        okxGreen: '#00b07c',
+                        okxRed: '#f14668',
+                        okxDark: '#12181f',
+                        okxCard: '#1e2631',
+                        okxBorder: '#2a3441'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-okxDark text-gray-200 font-sans min-h-screen flex flex-col md:flex-row select-none">
+
+    <!-- 侧边栏导航 -->
+    <aside class="w-full md:w-64 bg-okxCard border-r border-okxBorder p-4 flex flex-col justify-between shrink-0">
+        <div>
+            <div class="flex items-center space-x-2 border-b border-okxBorder pb-4 mb-4">
+                <div class="w-8 h-8 rounded bg-okxGreen flex items-center justify-center font-extrabold text-white text-lg">A</div>
+                <div>
+                    <h1 class="font-bold text-white text-base">交易所管理后台</h1>
+                    <p class="text-[10px] text-gray-400">Admin Control Center</p>
+                </div>
+            </div>
+
+            <nav class="space-y-1 text-xs">
+                <button onclick="switchTab('dashboard')" id="tab-dashboard-btn" class="w-full flex items-center space-x-2 px-3 py-2.5 rounded bg-gray-800 text-okxGreen font-bold transition">
+                    <span>📊</span> <span>数据总览</span>
+                </button>
+                <button onclick="switchTab('users')" id="tab-users-btn" class="w-full flex items-center space-x-2 px-3 py-2.5 rounded text-gray-400 hover:bg-gray-800 hover:text-white transition">
+                    <span>👥</span> <span>用户与资金管控</span>
+                </button>
+                <button onclick="switchTab('orders')" id="tab-orders-btn" class="w-full flex items-center space-x-2 px-3 py-2.5 rounded text-gray-400 hover:bg-gray-800 hover:text-white transition">
+                    <span>📈</span> <span>实时持仓与强平</span>
+                </button>
+                <button onclick="switchTab('logs')" id="tab-logs-btn" class="w-full flex items-center space-x-2 px-3 py-2.5 rounded text-gray-400 hover:bg-gray-800 hover:text-white transition">
+                    <span>📑</span> <span>全局流水日志</span>
+                </button>
+            </nav>
+        </div>
+
+        <div class="border-t border-okxBorder pt-3 text-[10px] text-gray-500 flex justify-between items-center">
+            <span>系统状态: <span class="text-okxGreen font-bold">正常运行</span></span>
+            <button onclick="refreshData()" class="text-gray-400 hover:text-white underline">手动刷新</button>
+        </div>
+    </aside>
+
+    <!-- 主内容区 -->
+    <main class="flex-1 p-4 md:p-6 overflow-y-auto">
+
+        <!-- 页面顶部 -->
+        <header class="flex justify-between items-center mb-6 pb-2 border-b border-okxBorder">
+            <h2 class="text-lg font-bold text-white" id="page-title">数据总览</h2>
+            <div class="text-xs text-gray-400">系统时间: <span id="admin-time">00:00:00</span></div>
+        </header>
+
+        <!-- 板块 1：数据总览 (Dashboard) -->
+        <section id="sec-dashboard" class="space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="bg-okxCard border border-okxBorder p-4 rounded-xl">
+                    <div class="text-xs text-gray-400">用户 USDT 净余额</div>
+                    <div class="text-2xl font-extrabold text-white mt-1" id="stat-total-usdt">0.00</div>
+                    <div class="text-[10px] text-okxGreen mt-2">↑ 实时读取本地数据</div>
+                </div>
+                <div class="bg-okxCard border border-okxBorder p-4 rounded-xl">
+                    <div class="text-xs text-gray-400">当前活跃持仓笔数</div>
+                    <div class="text-2xl font-extrabold text-white mt-1" id="stat-active-orders">0</div>
+                    <div class="text-[10px] text-gray-400 mt-2">包含现货 / 合约 / 期权</div>
+                </div>
+                <div class="bg-okxCard border border-okxBorder p-4 rounded-xl">
+                    <div class="text-xs text-gray-400">系统日志总记录数</div>
+                    <div class="text-2xl font-extrabold text-white mt-1" id="stat-total-logs">0</div>
+                    <div class="text-[10px] text-gray-400 mt-2">充提与交易全记录</div>
+                </div>
+                <div class="bg-okxCard border border-okxBorder p-4 rounded-xl">
+                    <div class="text-xs text-gray-400">风控干预状态</div>
+                    <div class="text-2xl font-extrabold text-okxGreen mt-1">自动 (Normal)</div>
+                    <div class="text-[10px] text-gray-400 mt-2">支持后台强制介入平仓</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 板块 2：用户与资金管控 (Users) -->
+        <section id="sec-users" class="space-y-4 hidden">
+            <div class="bg-okxCard border border-okxBorder p-4 rounded-xl">
+                <h3 class="text-sm font-bold text-white mb-3">调控模拟用户 USDT 资产</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                        <label class="text-xs text-gray-400 block mb-1">当前 USDT 账户余额</label>
+                        <input type="text" id="admin-user-usdt" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-xs text-white" placeholder="100000.00">
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="updateUserBalance()" class="w-full bg-okxGreen hover:bg-okxGreen/80 text-white py-2 rounded text-xs font-bold transition">保存修改余额</button>
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="resetUserAssets()" class="w-full bg-red-600 hover:bg-red-500 text-white py-2 rounded text-xs font-bold transition">重置账户为默认 $100,000</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 板块 3：实时持仓与强平 (Orders) -->
+        <section id="sec-orders" class="space-y-4 hidden">
+            <div class="bg-okxCard border border-okxBorder p-4 rounded-xl">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="text-sm font-bold text-white">用户实时未平仓订单</h3>
+                    <button onclick="renderAdminOrders()" class="text-xs text-okxGreen hover:underline">刷新列表</button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs border-collapse">
+                        <thead>
+                            <tr class="border-b border-okxBorder text-gray-400">
+                                <th class="py-2 px-2">交易对</th>
+                                <th class="py-2 px-2">模式</th>
+                                <th class="py-2 px-2">方向/杠杆</th>
+                                <th class="py-2 px-2">开仓价格</th>
+                                <th class="py-2 px-2">数量/本金</th>
+                                <th class="py-2 px-2">开仓时间</th>
+                                <th class="py-2 px-2 text-right">后台操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-orders-tbody" class="divide-y divide-okxBorder text-gray-300">
+                            <tr>
+                                <td colspan="7" class="text-center py-6 text-gray-500">暂无活跃持仓订单</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- 板块 4：全局流水日志 (Logs) -->
+        <section id="sec-logs" class="space-y-4 hidden">
+            <div class="bg-okxCard border border-okxBorder p-4 rounded-xl">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="text-sm font-bold text-white">系统审计与用户操作日志</h3>
+                    <button onclick="clearAdminLogs()" class="text-xs text-okxRed hover:underline">清空日志</button>
+                </div>
+                <div class="space-y-2 max-h-96 overflow-y-auto text-xs" id="admin-logs-container">
+                    <div class="text-gray-500 text-center py-4">暂无日志记录</div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        // Tab 切换逻辑
+        function switchTab(tab) {
+            ['dashboard', 'users', 'orders', 'logs'].forEach(t => {
+                const btn = document.getElementById(`tab-${t}-btn`);
+                const sec = document.getElementById(`sec-${t}`);
+                if (t === tab) {
+                    btn.className = "w-full flex items-center space-x-2 px-3 py-2.5 rounded bg-gray-800 text-okxGreen font-bold transition";
+                    sec.classList.remove('hidden');
+                } else {
+                    btn.className = "w-full flex items-center space-x-2 px-3 py-2.5 rounded text-gray-400 hover:bg-gray-800 hover:text-white transition";
+                    sec.classList.add('hidden');
+                }
+            });
+
+            const titles = {
+                dashboard: '数据总览',
+                users: '用户与资金管控',
+                orders: '实时持仓与强平',
+                logs: '全局流水日志'
+            };
+            document.getElementById('page-title').innerText = titles[tab];
+            refreshData();
+        }
+
+        // 时钟更新
+        function updateAdminTime() {
+            const now = new Date();
+            document.getElementById('admin-time').innerText = now.toLocaleTimeString();
+        }
+        setInterval(updateAdminTime, 1000);
+        updateAdminTime();
+
+        // 获取并刷新数据
+        function refreshData() {
+            // 资产获取
+            let assets = JSON.parse(localStorage.getItem('user_assets')) || { usdt: 100000.00 };
+            document.getElementById('stat-total-usdt').innerText = `$${(assets.usdt || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+            document.getElementById('admin-user-usdt').value = assets.usdt || 100000.00;
+
+            // 订单获取
+            let allOrders = JSON.parse(localStorage.getItem('user_orders')) || {};
+            let totalActiveOrders = 0;
+            Object.keys(allOrders).forEach(sym => {
+                totalActiveOrders += (allOrders[sym] || []).length;
+            });
+            document.getElementById('stat-active-orders').innerText = totalActiveOrders;
+
+            // 日志获取
+            let logs = JSON.parse(localStorage.getItem('user_history_logs')) || [];
+            document.getElementById('stat-total-logs').innerText = logs.length;
+
+            renderAdminOrders();
+            renderAdminLogs();
+        }
+
+        // 修改用户余额
+        function updateUserBalance() {
+            let newVal = parseFloat(document.getElementById('admin-user-usdt').value);
+            if (isNaN(newVal) || newVal < 0) {
+                alert('请输入有效金额！');
+                return;
+            }
+            let assets = JSON.parse(localStorage.getItem('user_assets')) || { usdt: 100000.00 };
+            assets.usdt = newVal;
+            localStorage.setItem('user_assets', JSON.stringify(assets));
+
+            addAdminLog('管理员干预', `后台人工设置用户 USDT 余额为: $${newVal.toFixed(2)}`);
+            alert('🎉 修改成功！用户端刷新页面后将实时生效。');
+            refreshData();
+        }
+
+        function resetUserAssets() {
+            if (!confirm('确定要将用户资产重置为默认 $100,000 USDT 吗？')) return;
+            localStorage.setItem('user_assets', JSON.stringify({ usdt: 100000.00 }));
+            addAdminLog('管理员干预', '重置用户 USDT 资产为 $100,000.00');
+            alert('✅ 重置成功！');
+            refreshData();
+        }
+
+        // 渲染订单与后台强平
+        function renderAdminOrders() {
+            let allOrders = JSON.parse(localStorage.getItem('user_orders')) || {};
+            const tbody = document.getElementById('admin-orders-tbody');
+            tbody.innerHTML = '';
+
+            let hasOrders = false;
+
+            Object.keys(allOrders).forEach(symbol => {
+                let symbolOrders = allOrders[symbol] || [];
+                symbolOrders.forEach((order, index) => {
+                    hasOrders = true;
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-gray-800/50 transition">
+                            <td class="py-2.5 px-2 font-bold text-white">${symbol}/USDT</td>
+                            <td class="py-2.5 px-2"><span class="bg-gray-800 px-1.5 py-0.5 rounded text-[10px] text-okxGreen">${order.mode.toUpperCase()}</span></td>
+                            <td class="py-2.5 px-2">${order.type || 'BUY'} ${order.lev ? order.lev + 'x' : ''}</td>
+                            <td class="py-2.5 px-2 font-mono">${order.price.toFixed(order.price < 1 ? 6 : 2)}</td>
+                            <td class="py-2.5 px-2">${order.amount}</td>
+                            <td class="py-2.5 px-2 text-gray-400">${order.time}</td>
+                            <td class="py-2.5 px-2 text-right">
+                                <button onclick="adminForceClose('${symbol}', ${index})" class="bg-okxRed/20 hover:bg-okxRed text-okxRed hover:text-white px-2 py-1 rounded text-[10px] transition">强制平仓</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            });
+
+            if (!hasOrders) {
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-gray-500">暂无活跃持仓订单</td></tr>`;
+            }
+        }
+
+        // 后端强平逻辑
+        function adminForceClose(symbol, index) {
+            if (!confirm(`确定要强制平仓该笔 ${symbol}/USDT 订单吗？`)) return;
+
+            let allOrders = JSON.parse(localStorage.getItem('user_orders')) || {};
+            if (allOrders[symbol] && allOrders[symbol][index]) {
+                let order = allOrders[symbol][index];
+                allOrders[symbol].splice(index, 1);
+                localStorage.setItem('user_orders', JSON.stringify(allOrders));
+
+                addAdminLog('后台强平', `管理员强平订单 [${symbol}] 数量:${order.amount}`);
+                alert(`✅ 强平成功！已清除该笔订单。`);
+                refreshData();
+            }
+        }
+
+        // 渲染日志
+        function renderAdminLogs() {
+            let logs = JSON.parse(localStorage.getItem('user_history_logs')) || [];
+            const container = document.getElementById('admin-logs-container');
+            if (!container) return;
+
+            if (logs.length === 0) {
+                container.innerHTML = `<div class="text-gray-500 text-center py-4">暂无日志记录</div>`;
+                return;
+            }
+
+            container.innerHTML = '';
+            logs.forEach(log => {
+                container.innerHTML += `
+                    <div class="bg-gray-900 p-2.5 rounded border border-okxBorder flex justify-between items-center">
+                        <div>
+                            <span class="font-bold text-white mr-2">${log.action}</span>
+                            <span class="text-gray-400">${log.detail}</span>
+                        </div>
+                        <span class="text-gray-500 font-mono text-[10px]">${log.time}</span>
+                    </div>
+                `;
+            });
+        }
+
+        function addAdminLog(action, detail) {
+            let logs = JSON.parse(localStorage.getItem('user_history_logs')) || [];
+            logs.unshift({ action, detail, time: new Date().toLocaleString() });
+            localStorage.setItem('user_history_logs', JSON.stringify(logs));
+        }
+
+        function clearAdminLogs() {
+            if (!confirm('确定要清空全部日志记录吗？')) return;
+            localStorage.setItem('user_history_logs', JSON.stringify([]));
+            refreshData();
+        }
+
+        window.onload = function() {
+            refreshData();
+        };
+    </script>
+</body>
+</html>
