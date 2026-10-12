@@ -1,5 +1,32 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+    <style>
+    /* 强制重置与放大移动端底部导航栏 */
+    nav.fixed.bottom-0 {
+        height: 3.8rem !important; /* 增加导航栏整体高度 */
+        padding-bottom: env(safe-area-inset-bottom) !important; /* 适配 iPhone 底部黑条，防止贴底 */
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-around !important;
+    }
+
+    /* 放大导航栏内部的按钮和文字 */
+    nav.fixed.bottom-0 a {
+        flex: 1 !important;
+        height: 100% !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 0.85rem !important; /* 放大文字 */
+        font-weight: 600 !important;
+    }
+
+    /* 增加页面底部留白，防止加高后的导航遮挡内容 */
+    body {
+        padding-bottom: calc(4.5rem + env(safe-area-inset-bottom)) !important;
+    }
+</style>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -59,10 +86,30 @@
     <!-- 主内容区 -->
     <main class="flex-1 p-4 md:p-6 overflow-y-auto">
 
-        <!-- 页面顶部 -->
-        <header class="flex justify-between items-center mb-6 pb-2 border-b border-okxBorder">
-            <h2 class="text-lg font-bold text-white" id="page-title">数据总览</h2>
-            <div class="text-xs text-gray-400">系统时间: <span id="admin-time">00:00:00</span></div>
+        <!-- 页面顶部栏与登录状态 -->
+        <header class="flex justify-between items-center mb-6 pb-3 border-b border-okxBorder">
+            <div>
+                <h2 class="text-lg font-bold text-white" id="page-title">数据总览</h2>
+                <div class="text-xs text-gray-400 mt-0.5">系统时间: <span id="admin-time">00:00:00</span></div>
+            </div>
+            
+            <div id="auth-status-container" class="flex items-center space-x-3 text-xs">
+                <!-- 未登录状态显示 -->
+                <div id="status-logged-out" class="flex items-center space-x-2">
+                    <span class="inline-block w-2 h-2 rounded-full bg-red-500"></span>
+                    <span class="text-gray-400">未登录（交易管控受限）</span>
+                    <button onclick="showLoginModal()" class="ml-2 bg-okxGreen hover:bg-okxGreen/80 text-white px-3 py-1.5 rounded font-bold transition">管理员登录</button>
+                </div>
+                <!-- 已登录状态显示 -->
+                <div id="status-logged-in" class="hidden flex items-center space-x-3 bg-gray-800/80 border border-okxBorder px-3 py-1.5 rounded-lg">
+                    <div class="flex items-center space-x-1.5">
+                        <span class="inline-block w-2 h-2 rounded-full bg-okxGreen"></span>
+                        <span class="text-white font-bold" id="current-user-display">Admin</span>
+                    </div>
+                    <span class="text-gray-500">|</span>
+                    <button onclick="handleLogout()" class="text-okxRed hover:underline">退出登录</button>
+                </div>
+            </div>
         </header>
 
         <!-- 板块 1：数据总览 (Dashboard) -->
@@ -85,8 +132,8 @@
                 </div>
                 <div class="bg-okxCard border border-okxBorder p-4 rounded-xl">
                     <div class="text-xs text-gray-400">风控干预状态</div>
-                    <div class="text-2xl font-extrabold text-okxGreen mt-1">自动 (Normal)</div>
-                    <div class="text-[10px] text-gray-400 mt-2">支持后台强制介入平仓</div>
+                    <div class="text-2xl font-extrabold text-okxGreen mt-1" id="stat-control-status">需要登录权限</div>
+                    <div class="text-[10px] text-gray-400 mt-2">登录后即可解禁强平与调控功能</div>
                 </div>
             </div>
         </section>
@@ -101,10 +148,10 @@
                         <input type="text" id="admin-user-usdt" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-xs text-white" placeholder="100000.00">
                     </div>
                     <div class="flex items-end">
-                        <button onclick="updateUserBalance()" class="w-full bg-okxGreen hover:bg-okxGreen/80 text-white py-2 rounded text-xs font-bold transition">保存修改余额</button>
+                        <button onclick="protectedAction(updateUserBalance)" class="w-full bg-okxGreen hover:bg-okxGreen/80 text-white py-2 rounded text-xs font-bold transition">保存修改余额</button>
                     </div>
                     <div class="flex items-end">
-                        <button onclick="resetUserAssets()" class="w-full bg-red-600 hover:bg-red-500 text-white py-2 rounded text-xs font-bold transition">重置账户为默认 $100,000</button>
+                        <button onclick="protectedAction(resetUserAssets)" class="w-full bg-red-600 hover:bg-red-500 text-white py-2 rounded text-xs font-bold transition">重置账户为默认 $100,000</button>
                     </div>
                 </div>
             </div>
@@ -145,7 +192,7 @@
             <div class="bg-okxCard border border-okxBorder p-4 rounded-xl">
                 <div class="flex justify-between items-center mb-3">
                     <h3 class="text-sm font-bold text-white">系统审计与用户操作日志</h3>
-                    <button onclick="clearAdminLogs()" class="text-xs text-okxRed hover:underline">清空日志</button>
+                    <button onclick="protectedAction(clearAdminLogs)" class="text-xs text-okxRed hover:underline">清空日志</button>
                 </div>
                 <div class="space-y-2 max-h-96 overflow-y-auto text-xs" id="admin-logs-container">
                     <div class="text-gray-500 text-center py-4">暂无日志记录</div>
@@ -155,8 +202,101 @@
 
     </main>
 
+    <!-- 登录弹窗 (Modal) -->
+    <div id="login-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="bg-okxCard border border-okxBorder rounded-2xl p-6 w-full max-w-sm shadow-2xl relative">
+            <div class="flex items-center justify-between border-b border-okxBorder pb-3 mb-4">
+                <div class="flex items-center space-x-2">
+                    <div class="w-6 h-6 rounded bg-okxGreen flex items-center justify-center font-bold text-white text-xs">🔒</div>
+                    <h3 class="font-bold text-white text-base">管理员身份验证</h3>
+                </div>
+                <button onclick="hideLoginModal()" class="text-gray-400 hover:text-white text-lg font-bold">&times;</button>
+            </div>
+            
+            <form onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">账号 (Default: admin)</label>
+                    <input type="text" id="login-username" required class="w-full bg-gray-900 border border-gray-700 rounded p-2.5 text-xs text-white focus:border-okxGreen outline-none" placeholder="请输入管理员账号">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">密码 (Default: 123456)</label>
+                    <input type="password" id="login-password" required class="w-full bg-gray-900 border border-gray-700 rounded p-2.5 text-xs text-white focus:border-okxGreen outline-none" placeholder="请输入管理员密码">
+                </div>
+                <div id="login-error-msg" class="text-okxRed text-xs hidden">账号或密码错误！</div>
+                <button type="submit" class="w-full bg-okxGreen hover:bg-okxGreen/80 text-white font-bold py-2.5 rounded text-xs transition">登 录 并 解 锁 功能</button>
+            </form>
+        </div>
+    </div>
+
     <script>
-        // Tab 切换逻辑
+        // --- 登录状态管理 ---
+        let isLoggedIn = false;
+
+        function checkAuthStatus() {
+            const authUser = sessionStorage.getItem('admin_authenticated_user');
+            if (authUser) {
+                isLoggedIn = true;
+                document.getElementById('status-logged-out').classList.add('hidden');
+                document.getElementById('status-logged-in').classList.remove('hidden');
+                document.getElementById('current-user-display').innerText = authUser;
+                document.getElementById('stat-control-status').innerText = "已解锁 (Unlocked)";
+                document.getElementById('stat-control-status').className = "text-2xl font-extrabold text-okxGreen mt-1";
+            } else {
+                isLoggedIn = false;
+                document.getElementById('status-logged-out').classList.remove('hidden');
+                document.getElementById('status-logged-in').classList.add('hidden');
+                document.getElementById('stat-control-status').innerText = "需要登录权限";
+                document.getElementById('stat-control-status').className = "text-2xl font-extrabold text-amber-500 mt-1";
+            }
+            renderAdminOrders(); // 重新渲染订单列表以更替操作按钮状态
+        }
+
+        function showLoginModal() {
+            document.getElementById('login-modal').classList.remove('hidden');
+            document.getElementById('login-error-msg').classList.add('hidden');
+        }
+
+        function hideLoginModal() {
+            document.getElementById('login-modal').classList.add('hidden');
+        }
+
+        function handleLogin(event) {
+            event.preventDefault();
+            const user = document.getElementById('login-username').value.trim();
+            const pass = document.getElementById('login-password').value.trim();
+
+            // 验证账号密码（可替换为您自己的账号密码逻辑）
+            if (user === 'admin' && pass === '123456') {
+                sessionStorage.setItem('admin_authenticated_user', user);
+                hideLoginModal();
+                checkAuthStatus();
+                addAdminLog('管理员登录', `用户 [${user}] 成功登录交易管理后台`);
+                alert('🎉 登录成功！所有交易管理功能已开启。');
+            } else {
+                document.getElementById('login-error-msg').classList.remove('hidden');
+            }
+        }
+
+        function handleLogout() {
+            if (!confirm('确定要退出登录吗？退出后交易管控功能将被锁定。')) return;
+            const user = sessionStorage.getItem('admin_authenticated_user');
+            addAdminLog('管理员登出', `用户 [${user}] 退出系统`);
+            sessionStorage.removeItem('admin_authenticated_user');
+            checkAuthStatus();
+            alert('已成功退出登录。');
+        }
+
+        // 交易受保护高危操作防护函数
+        function protectedAction(actionCallback) {
+            if (!isLoggedIn) {
+                alert('⚠️ 该操作需要管理员权限，请先登录！');
+                showLoginModal();
+                return;
+            }
+            actionCallback();
+        }
+
+        // --- Tab 切换逻辑 ---
         function switchTab(tab) {
             ['dashboard', 'users', 'orders', 'logs'].forEach(t => {
                 const btn = document.getElementById(`tab-${t}-btn`);
@@ -190,12 +330,10 @@
 
         // 获取并刷新数据
         function refreshData() {
-            // 资产获取
             let assets = JSON.parse(localStorage.getItem('user_assets')) || { usdt: 100000.00 };
             document.getElementById('stat-total-usdt').innerText = `$${(assets.usdt || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}`;
             document.getElementById('admin-user-usdt').value = assets.usdt || 100000.00;
 
-            // 订单获取
             let allOrders = JSON.parse(localStorage.getItem('user_orders')) || {};
             let totalActiveOrders = 0;
             Object.keys(allOrders).forEach(sym => {
@@ -203,7 +341,6 @@
             });
             document.getElementById('stat-active-orders').innerText = totalActiveOrders;
 
-            // 日志获取
             let logs = JSON.parse(localStorage.getItem('user_history_logs')) || [];
             document.getElementById('stat-total-logs').innerText = logs.length;
 
@@ -250,13 +387,16 @@
                     tbody.innerHTML += `
                         <tr class="hover:bg-gray-800/50 transition">
                             <td class="py-2.5 px-2 font-bold text-white">${symbol}/USDT</td>
-                            <td class="py-2.5 px-2"><span class="bg-gray-800 px-1.5 py-0.5 rounded text-[10px] text-okxGreen">${order.mode.toUpperCase()}</span></td>
+                            <td class="py-2.5 px-2"><span class="bg-gray-800 px-1.5 py-0.5 rounded text-[10px] text-okxGreen">${(order.mode || 'SPOT').toUpperCase()}</span></td>
                             <td class="py-2.5 px-2">${order.type || 'BUY'} ${order.lev ? order.lev + 'x' : ''}</td>
-                            <td class="py-2.5 px-2 font-mono">${order.price.toFixed(order.price < 1 ? 6 : 2)}</td>
+                            <td class="py-2.5 px-2 font-mono">${(order.price || 0).toFixed(order.price < 1 ? 6 : 2)}</td>
                             <td class="py-2.5 px-2">${order.amount}</td>
-                            <td class="py-2.5 px-2 text-gray-400">${order.time}</td>
+                            <td class="py-2.5 px-2 text-gray-400">${order.time || '-'}</td>
                             <td class="py-2.5 px-2 text-right">
-                                <button onclick="adminForceClose('${symbol}', ${index})" class="bg-okxRed/20 hover:bg-okxRed text-okxRed hover:text-white px-2 py-1 rounded text-[10px] transition">强制平仓</button>
+                                <button onclick="protectedAction(() => adminForceClose('${symbol}', ${index}))" 
+                                    class="${isLoggedIn ? 'bg-okxRed/20 hover:bg-okxRed text-okxRed hover:text-white' : 'bg-gray-800 text-gray-500 cursor-not-allowed'} px-2 py-1 rounded text-[10px] transition">
+                                    ${isLoggedIn ? '强制平仓' : '🔒 需登录'}
+                                </button>
                             </td>
                         </tr>
                     `;
@@ -322,6 +462,7 @@
         }
 
         window.onload = function() {
+            checkAuthStatus();
             refreshData();
         };
     </script>

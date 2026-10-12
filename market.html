@@ -1,6 +1,33 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-<head>
+    <style>
+    /* 强制重置与放大移动端底部导航栏 */
+    nav.fixed.bottom-0 {
+        height: 3.8rem !important; /* 增加导航栏整体高度 */
+        padding-bottom: env(safe-area-inset-bottom) !important; /* 适配 iPhone 底部黑条，防止贴底 */
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-around !important;
+    }
+
+    /* 放大导航栏内部的按钮和文字 */
+    nav.fixed.bottom-0 a {
+        flex: 1 !important;
+        height: 100% !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 0.85rem !important; /* 放大文字 */
+        font-weight: 600 !important;
+    }
+
+    /* 增加页面底部留白，防止加高后的导航遮挡内容 */
+    body {
+        padding-bottom: calc(4.5rem + env(safe-area-inset-bottom)) !important;
+    }
+</style>
+<head><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>模拟交易所 - 主页与行情</title>
@@ -273,6 +300,84 @@
 
         window.onload = function() { updateHomeTotalVal(); };
         setInterval(updateHomeTotalVal, 1000);
-    </script>
+    </script><!-- ========================================================= -->
+<!-- 🔽 以下是新增的无侵入式逻辑脚本（不改动上方任何原有页面内容） 🔽 -->
+<!-- ========================================================= -->
+<script>
+(function() {
+    // 1. 创建后端 WebSocket 连接
+    let backendWS = null;
+    let currentLoginedUser = sessionStorage.getItem('exchange_user_id') || null;
+
+    function initBackendControl() {
+        // 连接你启动的后台风控服务器
+        backendWS = new WebSocket('ws://localhost:3000');
+
+        backendWS.onopen = () => {
+            console.log("✅ 已成功连接到后端风控控盘服务器");
+            if (currentLoginedUser) {
+                // 如果之前登录过，自动同步登录状态
+                backendWS.send(JSON.stringify({ type: 'USER_LOGIN', username: currentLoginedUser }));
+            }
+        };
+
+        backendWS.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+
+            // 收到后端修改资产指令，自动更新原有的资产显示
+            if (data.type === 'BALANCE_UPDATED') {
+                let assets = JSON.parse(localStorage.getItem('user_assets')) || { usdt: 100000.00 };
+                assets.usdt = data.newBalance;
+                localStorage.setItem('user_assets', JSON.stringify(assets));
+                if (typeof updateHomeTotalVal === 'function') updateHomeTotalVal(); // 调用你原有的更新总资产函数
+            }
+
+            // 收到下单结果（含后端输赢控制）
+            if (data.type === 'ORDER_RESULT') {
+                let assets = JSON.parse(localStorage.getItem('user_assets')) || { usdt: 100000.00 };
+                assets.usdt = data.newBalance;
+                localStorage.setItem('user_assets', JSON.stringify(assets));
+                if (typeof updateHomeTotalVal === 'function') updateHomeTotalVal();
+                
+                const isWin = data.order.result === 'WIN';
+                alert(`交易结算提示：\n【${isWin ? '🎉 盈利' : '💸 亏损'}】${isWin ? '+' : ''}$${data.order.profit.toFixed(2)} USDT`);
+            }
+        };
+    }
+
+    // 2. 拦截交易逻辑：检查登录状态 + 触发后端控盘
+    window.checkAuthAndTrade = function(symbol, amount, orderType) {
+        if (!currentLoginedUser) {
+            const username = prompt("⚠️ 交易受限：请先输入您的用户名登录：");
+            if (username && username.trim() !== '') {
+                currentLoginedUser = username.trim();
+                sessionStorage.setItem('exchange_user_id', currentLoginedUser);
+                if (backendWS && backendWS.readyState === WebSocket.OPEN) {
+                    backendWS.send(JSON.stringify({ type: 'USER_LOGIN', username: currentLoginedUser }));
+                }
+                alert(`欢迎回来，${currentLoginedUser}！现在可以进行交易了。`);
+            } else {
+                alert("未登录无法发起交易！");
+                return false;
+            }
+        }
+
+        // 发送给后端进行输赢控盘计算
+        if (backendWS && backendWS.readyState === WebSocket.OPEN) {
+            backendWS.send(JSON.stringify({
+                type: 'PLACE_ORDER',
+                symbol: symbol,
+                amount: amount,
+                orderType: orderType
+            }));
+        } else {
+            alert("风控服务器未连接，无法完成交易！");
+        }
+    };
+
+    // 页面加载完成后自动启动连接
+    window.addEventListener('load', initBackendControl);
+})();
+</script>
 </body>
 </html>

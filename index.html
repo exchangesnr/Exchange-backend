@@ -2,8 +2,8 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>模拟交易所 - 主页与行情</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>交易所后台管理系统 - Admin Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -14,265 +14,430 @@
                         okxRed: '#f14668',
                         okxDark: '#12181f',
                         okxCard: '#1e2631',
+                        okxBorder: '#2a3441'
                     }
                 }
             }
         }
     </script>
 </head>
-<body class="bg-okxDark text-gray-200 font-sans pb-24">
+<body class="bg-okxDark text-gray-200 font-sans min-h-screen flex flex-col md:flex-row select-none">
 
-    <!-- 顶栏：多语言、时区与法币/币种切换 -->
-    <header class="flex justify-between items-center p-3 bg-okxCard border-b border-gray-800 sticky top-0 z-50">
-        <div class="flex items-center space-x-2">
-            <span class="text-xs text-gray-400" id="live-time">00:00:00</span>
-        </div>
-        <div class="flex items-center space-x-1.5">
-            <!-- 估值货币切换 -->
-            <select id="currency-select" onchange="changeValCurrency(this.value)" class="bg-gray-900 border border-gray-700 text-gray-200 text-xs rounded px-1.5 py-1 focus:outline-none">
-                <option value="USDT">USDT</option>
-                <option value="USD">USD ($)</option>
-                <option value="CNY">CNY (¥)</option>
-                <option value="HKD">HKD (HK$)</option>
-                <option value="BTC">BTC (₿)</option>
-            </select>
-            <!-- 语言切换 -->
-            <select id="lang-select" onchange="changeLanguage(this.value)" class="bg-gray-900 border border-gray-700 text-gray-200 text-xs rounded px-1.5 py-1 focus:outline-none">
-                <option value="zh-CN">简体中文</option>
-                <option value="en-US">English</option>
-                <option value="zh-HK">繁體中文</option>
-            </select>
-        </div>
-    </header>
-
-    <!-- 主页顶部资产总览卡片（带充币/提币快捷入口） -->
-    <div class="p-3">
-        <div class="bg-gradient-to-r from-okxCard to-gray-800 p-4 rounded-xl border border-gray-800 shadow-lg">
-            <div class="text-xs text-gray-400" data-i18n="total-equity">账户总资产折合</div>
-            <div class="text-2xl font-extrabold text-white mt-1" id="home-total-val">--</div>
-            <div class="grid grid-cols-2 gap-2 mt-4">
-                <button onclick="openModal('deposit')" class="bg-okxGreen text-white py-1.5 rounded text-xs font-bold shadow flex items-center justify-center space-x-1 cursor-pointer">
-                    <span>↓</span> <span data-i18n="btn-deposit">充币</span>
-                </button>
-                <button onclick="openModal('withdraw')" class="bg-gray-700 hover:bg-gray-600 text-white py-1.5 rounded text-xs font-bold shadow flex items-center justify-center space-x-1 cursor-pointer">
-                    <span>↑</span> <span data-i18n="btn-withdraw">提币</span>
-                </button>
+    <!-- 侧边栏导航 -->
+    <aside class="w-full md:w-64 bg-okxCard border-r border-okxBorder p-4 flex flex-col justify-between shrink-0">
+        <div>
+            <div class="flex items-center space-x-2 border-b border-okxBorder pb-4 mb-4">
+                <div class="w-8 h-8 rounded bg-okxGreen flex items-center justify-center font-extrabold text-white text-lg">A</div>
+                <div>
+                    <h1 class="font-bold text-white text-base">交易所管理后台</h1>
+                    <p class="text-[10px] text-gray-400">Admin Control Center</p>
+                </div>
             </div>
+
+            <nav class="space-y-1 text-xs">
+                <button onclick="switchTab('dashboard')" id="tab-dashboard-btn" class="w-full flex items-center space-x-2 px-3 py-2.5 rounded bg-gray-800 text-okxGreen font-bold transition">
+                    <span>📊</span> <span>数据总览</span>
+                </button>
+                <button onclick="switchTab('users')" id="tab-users-btn" class="w-full flex items-center space-x-2 px-3 py-2.5 rounded text-gray-400 hover:bg-gray-800 hover:text-white transition">
+                    <span>👥</span> <span>用户与资金管控</span>
+                </button>
+                <button onclick="switchTab('orders')" id="tab-orders-btn" class="w-full flex items-center space-x-2 px-3 py-2.5 rounded text-gray-400 hover:bg-gray-800 hover:text-white transition">
+                    <span>📈</span> <span>实时持仓与强平</span>
+                </button>
+                <button onclick="switchTab('logs')" id="tab-logs-btn" class="w-full flex items-center space-x-2 px-3 py-2.5 rounded text-gray-400 hover:bg-gray-800 hover:text-white transition">
+                    <span>📑</span> <span>全局流水日志</span>
+                </button>
+            </nav>
+        </div>
+
+        <div class="border-t border-okxBorder pt-3 text-[10px] text-gray-500 flex justify-between items-center">
+            <span>系统状态: <span class="text-okxGreen font-bold">正常运行</span></span>
+            <button onclick="refreshData()" class="text-gray-400 hover:text-white underline">手动刷新</button>
+        </div>
+    </aside>
+
+    <!-- 主内容区 -->
+    <main class="flex-1 p-4 md:p-6 overflow-y-auto">
+
+        <!-- 页面顶部栏与登录状态 -->
+        <header class="flex justify-between items-center mb-6 pb-3 border-b border-okxBorder">
+            <div>
+                <h2 class="text-lg font-bold text-white" id="page-title">数据总览</h2>
+                <div class="text-xs text-gray-400 mt-0.5">系统时间: <span id="admin-time">00:00:00</span></div>
+            </div>
+            
+            <div id="auth-status-container" class="flex items-center space-x-3 text-xs">
+                <!-- 未登录状态显示 -->
+                <div id="status-logged-out" class="flex items-center space-x-2">
+                    <span class="inline-block w-2 h-2 rounded-full bg-red-500"></span>
+                    <span class="text-gray-400">未登录（交易管控受限）</span>
+                    <button onclick="showLoginModal()" class="ml-2 bg-okxGreen hover:bg-okxGreen/80 text-white px-3 py-1.5 rounded font-bold transition">管理员登录</button>
+                </div>
+                <!-- 已登录状态显示 -->
+                <div id="status-logged-in" class="hidden flex items-center space-x-3 bg-gray-800/80 border border-okxBorder px-3 py-1.5 rounded-lg">
+                    <div class="flex items-center space-x-1.5">
+                        <span class="inline-block w-2 h-2 rounded-full bg-okxGreen"></span>
+                        <span class="text-white font-bold" id="current-user-display">Admin</span>
+                    </div>
+                    <span class="text-gray-500">|</span>
+                    <button onclick="handleLogout()" class="text-okxRed hover:underline">退出登录</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- 板块 1：数据总览 (Dashboard) -->
+        <section id="sec-dashboard" class="space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="bg-okxCard border border-okxBorder p-4 rounded-xl">
+                    <div class="text-xs text-gray-400">用户 USDT 净余额</div>
+                    <div class="text-2xl font-extrabold text-white mt-1" id="stat-total-usdt">0.00</div>
+                    <div class="text-[10px] text-okxGreen mt-2">↑ 实时读取本地数据</div>
+                </div>
+                <div class="bg-okxCard border border-okxBorder p-4 rounded-xl">
+                    <div class="text-xs text-gray-400">当前活跃持仓笔数</div>
+                    <div class="text-2xl font-extrabold text-white mt-1" id="stat-active-orders">0</div>
+                    <div class="text-[10px] text-gray-400 mt-2">包含现货 / 合约 / 期权</div>
+                </div>
+                <div class="bg-okxCard border border-okxBorder p-4 rounded-xl">
+                    <div class="text-xs text-gray-400">系统日志总记录数</div>
+                    <div class="text-2xl font-extrabold text-white mt-1" id="stat-total-logs">0</div>
+                    <div class="text-[10px] text-gray-400 mt-2">充提与交易全记录</div>
+                </div>
+                <div class="bg-okxCard border border-okxBorder p-4 rounded-xl">
+                    <div class="text-xs text-gray-400">风控干预状态</div>
+                    <div class="text-2xl font-extrabold text-okxGreen mt-1" id="stat-control-status">需要登录权限</div>
+                    <div class="text-[10px] text-gray-400 mt-2">登录后即可解禁强平与调控功能</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 板块 2：用户与资金管控 (Users) -->
+        <section id="sec-users" class="space-y-4 hidden">
+            <div class="bg-okxCard border border-okxBorder p-4 rounded-xl">
+                <h3 class="text-sm font-bold text-white mb-3">调控模拟用户 USDT 资产</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                        <label class="text-xs text-gray-400 block mb-1">当前 USDT 账户余额</label>
+                        <input type="text" id="admin-user-usdt" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-xs text-white" placeholder="100000.00">
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="protectedAction(updateUserBalance)" class="w-full bg-okxGreen hover:bg-okxGreen/80 text-white py-2 rounded text-xs font-bold transition">保存修改余额</button>
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="protectedAction(resetUserAssets)" class="w-full bg-red-600 hover:bg-red-500 text-white py-2 rounded text-xs font-bold transition">重置账户为默认 $100,000</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 板块 3：实时持仓与强平 (Orders) -->
+        <section id="sec-orders" class="space-y-4 hidden">
+            <div class="bg-okxCard border border-okxBorder p-4 rounded-xl">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="text-sm font-bold text-white">用户实时未平仓订单</h3>
+                    <button onclick="renderAdminOrders()" class="text-xs text-okxGreen hover:underline">刷新列表</button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs border-collapse">
+                        <thead>
+                            <tr class="border-b border-okxBorder text-gray-400">
+                                <th class="py-2 px-2">交易对</th>
+                                <th class="py-2 px-2">模式</th>
+                                <th class="py-2 px-2">方向/杠杆</th>
+                                <th class="py-2 px-2">开仓价格</th>
+                                <th class="py-2 px-2">数量/本金</th>
+                                <th class="py-2 px-2">开仓时间</th>
+                                <th class="py-2 px-2 text-right">后台操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-orders-tbody" class="divide-y divide-okxBorder text-gray-300">
+                            <tr>
+                                <td colspan="7" class="text-center py-6 text-gray-500">暂无活跃持仓订单</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- 板块 4：全局流水日志 (Logs) -->
+        <section id="sec-logs" class="space-y-4 hidden">
+            <div class="bg-okxCard border border-okxBorder p-4 rounded-xl">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="text-sm font-bold text-white">系统审计与用户操作日志</h3>
+                    <button onclick="protectedAction(clearAdminLogs)" class="text-xs text-okxRed hover:underline">清空日志</button>
+                </div>
+                <div class="space-y-2 max-h-96 overflow-y-auto text-xs" id="admin-logs-container">
+                    <div class="text-gray-500 text-center py-4">暂无日志记录</div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- 登录弹窗 (Modal) -->
+    <div id="login-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="bg-okxCard border border-okxBorder rounded-2xl p-6 w-full max-w-sm shadow-2xl relative">
+            <div class="flex items-center justify-between border-b border-okxBorder pb-3 mb-4">
+                <div class="flex items-center space-x-2">
+                    <div class="w-6 h-6 rounded bg-okxGreen flex items-center justify-center font-bold text-white text-xs">🔒</div>
+                    <h3 class="font-bold text-white text-base">管理员身份验证</h3>
+                </div>
+                <button onclick="hideLoginModal()" class="text-gray-400 hover:text-white text-lg font-bold">&times;</button>
+            </div>
+            
+            <form onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">账号 (Default: admin)</label>
+                    <input type="text" id="login-username" required class="w-full bg-gray-900 border border-gray-700 rounded p-2.5 text-xs text-white focus:border-okxGreen outline-none" placeholder="请输入管理员账号">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">密码 (Default: 123456)</label>
+                    <input type="password" id="login-password" required class="w-full bg-gray-900 border border-gray-700 rounded p-2.5 text-xs text-white focus:border-okxGreen outline-none" placeholder="请输入管理员密码">
+                </div>
+                <div id="login-error-msg" class="text-okxRed text-xs hidden">账号或密码错误！</div>
+                <button type="submit" class="w-full bg-okxGreen hover:bg-okxGreen/80 text-white font-bold py-2.5 rounded text-xs transition">登 录 并 解 锁 功能</button>
+            </form>
         </div>
     </div>
-
-    <!-- 行情列表区域 -->
-    <div class="px-3">
-        <div class="text-xs text-gray-400 mb-2 flex justify-between px-1">
-            <span data-i18n="th-pair">币种 / 成交额</span>
-            <span data-i18n="th-price">最新价 / 24h涨跌</span>
-        </div>
-        <div id="coin-list" class="space-y-2"></div>
-    </div>
-
-    <!-- 全局弹窗模块（充币/提币） -->
-    <div id="action-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-okxCard w-full max-w-sm rounded-xl border border-gray-700 p-4 text-xs space-y-3 relative shadow-2xl">
-            <button onclick="closeModal()" class="absolute top-3 right-3 text-gray-400 hover:text-white text-base font-bold">&times;</button>
-            <div id="modal-title" class="text-sm font-bold text-white border-b border-gray-800 pb-2"></div>
-            <div id="modal-body" class="space-y-3"></div>
-        </div>
-    </div>
-
-    <!-- 底部导航栏 -->
-    <nav class="fixed bottom-0 left-0 right-0 bg-okxCard border-t border-gray-800 flex justify-around py-2 z-50">
-        <a href="./market.html" class="text-okxGreen text-xs flex flex-col items-center font-bold" data-i18n="nav-market">行情</a>
-        <a href="./trade.html?symbol=BTC" class="text-gray-400 text-xs flex flex-col items-center" data-i18n="nav-trade">交易</a>
-        <a href="./assets.html" class="text-gray-400 text-xs flex flex-col items-center" data-i18n="nav-assets">资产</a>
-    </nav>
 
     <script>
-        const i18nData = {
-            'zh-CN': {
-                'total-equity': '账户总资产折合', 'btn-deposit': '链上充币', 'btn-withdraw': '快捷提币',
-                'th-pair': '币种 / 成交额', 'th-price': '最新价 / 24h涨跌',
-                'nav-market': '行情', 'nav-trade': '交易', 'nav-assets': '资产', 'timeZone': 'Asia/Shanghai',
-                'title-deposit': 'TRC20 链上充币', 'title-withdraw': '数字资产提现',
-                'lbl-network': '充币网络', 'lbl-amount': '数量', 'lbl-address': '充币地址',
-                'btn-copy': '复制地址', 'copy-success': '充币地址已复制！',
-                'btn-confirm-dep': '模拟链上到账 (+$10,000)', 'btn-confirm-wit': '确认提币',
-                'alert-dep': '🎉 充值成功！USDT 已实时入账。', 'alert-wit': '✅ 提币申请已提交！'
-            },
-            'en-US': {
-                'total-equity': 'Total Account Equity', 'btn-deposit': 'Deposit', 'btn-withdraw': 'Withdraw',
-                'th-pair': 'Pair / Vol', 'th-price': 'Last Price / 24h Chg',
-                'nav-market': 'Market', 'nav-trade': 'Trade', 'nav-assets': 'Assets', 'timeZone': 'America/New_York',
-                'title-deposit': 'On-chain Deposit', 'title-withdraw': 'Withdrawal',
-                'lbl-network': 'Network', 'lbl-amount': 'Amount', 'lbl-address': 'Address',
-                'btn-copy': 'Copy', 'copy-success': 'Address copied!',
-                'btn-confirm-dep': 'Simulate Deposit (+$10,000)', 'btn-confirm-wit': 'Confirm Withdraw',
-                'alert-dep': '🎉 Deposit successful!', 'alert-wit': '✅ Withdrawal submitted!'
-            },
-            'zh-HK': {
-                'total-equity': '賬戶總資產折合', 'btn-deposit': '鏈上充幣', 'btn-withdraw': '快捷提幣',
-                'th-pair': '幣種 / 成交額', 'th-price': '最新價 / 24h漲跌',
-                'nav-market': '行情', 'nav-trade': '交易', 'nav-assets': '資產', 'timeZone': 'Asia/Hong_Kong',
-                'title-deposit': 'TRC20 鏈上充幣', 'title-withdraw': '數字資產提現',
-                'lbl-network': '充幣網絡', 'lbl-amount': '數量', 'lbl-address': '充幣地址',
-                'btn-copy': '複製地址', 'copy-success': '充幣地址已複製！',
-                'btn-confirm-dep': '模擬鏈上到賬 (+$10,000)', 'btn-confirm-wit': '確認提幣',
-                'alert-dep': '🎉 充值成功！USDT 已實時入賬。', 'alert-wit': '✅ 提幣申請已提交！'
+        // --- 登录状态管理 ---
+        let isLoggedIn = false;
+
+        function checkAuthStatus() {
+            const authUser = sessionStorage.getItem('admin_authenticated_user');
+            if (authUser) {
+                isLoggedIn = true;
+                document.getElementById('status-logged-out').classList.add('hidden');
+                document.getElementById('status-logged-in').classList.remove('hidden');
+                document.getElementById('current-user-display').innerText = authUser;
+                document.getElementById('stat-control-status').innerText = "已解锁 (Unlocked)";
+                document.getElementById('stat-control-status').className = "text-2xl font-extrabold text-okxGreen mt-1";
+            } else {
+                isLoggedIn = false;
+                document.getElementById('status-logged-out').classList.remove('hidden');
+                document.getElementById('status-logged-in').classList.add('hidden');
+                document.getElementById('stat-control-status').innerText = "需要登录权限";
+                document.getElementById('stat-control-status').className = "text-2xl font-extrabold text-amber-500 mt-1";
             }
-        };
+            renderAdminOrders(); // 重新渲染订单列表以更替操作按钮状态
+        }
 
-        const topCoins = [
-            { symbol: 'BTC', price: 83350.00, change: 2.45, vol: '3.82B' },
-            { symbol: 'ETH', price: 3120.50, change: -0.82, vol: '1.95B' },
-            { symbol: 'SOL', price: 185.20, change: 5.12, vol: '1.20B' },
-            { symbol: 'XRP', price: 0.6250, change: 1.15, vol: '850M' },
-            { symbol: 'DOGE', price: 0.1680, change: -2.34, vol: '720M' },
-            { symbol: 'ADA', price: 0.4520, change: 0.45, vol: '410M' },
-            { symbol: 'TRX', price: 0.1240, change: 0.88, vol: '350M' },
-            { symbol: 'AVAX', price: 32.50, change: 3.40, vol: '310M' },
-            { symbol: 'LINK', price: 14.80, change: -1.20, vol: '290M' },
-            { symbol: 'SUI', price: 1.95, change: 8.45, vol: '580M' },
-            { symbol: 'SHIB', price: 0.000022, change: -1.50, vol: '260M' },
-            { symbol: 'BCH', price: 380.00, change: 1.05, vol: '210M' },
-            { symbol: 'DOT', price: 7.20, change: -0.65, vol: '190M' },
-            { symbol: 'NEAR', price: 5.60, change: 4.10, vol: '240M' },
-            { symbol: 'LTC', price: 82.40, change: 0.20, vol: '180M' },
-            { symbol: 'UNI', price: 8.90, change: 2.15, vol: '160M' },
-            { symbol: 'APT', price: 9.50, change: -3.20, vol: '220M' },
-            { symbol: 'PEPE', price: 0.000012, change: 6.80, vol: '450M' },
-            { symbol: 'ICP', price: 9.20, change: -0.90, vol: '130M' },
-            { symbol: 'RENDER', price: 7.80, change: 3.85, vol: '170M' }
-        ];
+        function showLoginModal() {
+            document.getElementById('login-modal').classList.remove('hidden');
+            document.getElementById('login-error-msg').classList.add('hidden');
+        }
 
-        let currentLang = localStorage.getItem('exchange_lang') || 'zh-CN';
-        let currentCurrency = localStorage.getItem('exchange_currency') || 'USDT';
-        document.getElementById('lang-select').value = currentLang;
-        document.getElementById('currency-select').value = currentCurrency;
+        function hideLoginModal() {
+            document.getElementById('login-modal').classList.add('hidden');
+        }
 
-        function changeLanguage(lang) {
-            currentLang = lang;
-            localStorage.setItem('exchange_lang', lang);
-            document.querySelectorAll('[data-i18n]').forEach(el => {
-                const key = el.getAttribute('data-i18n');
-                if (i18nData[currentLang][key]) el.innerText = i18nData[currentLang][key];
+        function handleLogin(event) {
+            event.preventDefault();
+            const user = document.getElementById('login-username').value.trim();
+            const pass = document.getElementById('login-password').value.trim();
+
+            // 验证账号密码（可替换为您自己的账号密码逻辑）
+            if (user === 'admin' && pass === '123456') {
+                sessionStorage.setItem('admin_authenticated_user', user);
+                hideLoginModal();
+                checkAuthStatus();
+                addAdminLog('管理员登录', `用户 [${user}] 成功登录交易管理后台`);
+                alert('🎉 登录成功！所有交易管理功能已开启。');
+            } else {
+                document.getElementById('login-error-msg').classList.remove('hidden');
+            }
+        }
+
+        function handleLogout() {
+            if (!confirm('确定要退出登录吗？退出后交易管控功能将被锁定。')) return;
+            const user = sessionStorage.getItem('admin_authenticated_user');
+            addAdminLog('管理员登出', `用户 [${user}] 退出系统`);
+            sessionStorage.removeItem('admin_authenticated_user');
+            checkAuthStatus();
+            alert('已成功退出登录。');
+        }
+
+        // 交易受保护高危操作防护函数
+        function protectedAction(actionCallback) {
+            if (!isLoggedIn) {
+                alert('⚠️ 该操作需要管理员权限，请先登录！');
+                showLoginModal();
+                return;
+            }
+            actionCallback();
+        }
+
+        // --- Tab 切换逻辑 ---
+        function switchTab(tab) {
+            ['dashboard', 'users', 'orders', 'logs'].forEach(t => {
+                const btn = document.getElementById(`tab-${t}-btn`);
+                const sec = document.getElementById(`sec-${t}`);
+                if (t === tab) {
+                    btn.className = "w-full flex items-center space-x-2 px-3 py-2.5 rounded bg-gray-800 text-okxGreen font-bold transition";
+                    sec.classList.remove('hidden');
+                } else {
+                    btn.className = "w-full flex items-center space-x-2 px-3 py-2.5 rounded text-gray-400 hover:bg-gray-800 hover:text-white transition";
+                    sec.classList.add('hidden');
+                }
             });
+
+            const titles = {
+                dashboard: '数据总览',
+                users: '用户与资金管控',
+                orders: '实时持仓与强平',
+                logs: '全局流水日志'
+            };
+            document.getElementById('page-title').innerText = titles[tab];
+            refreshData();
         }
-        changeLanguage(currentLang);
 
-        function changeValCurrency(curr) {
-            currentCurrency = curr;
-            localStorage.setItem('exchange_currency', curr);
-            updateHomeTotalVal();
+        // 时钟更新
+        function updateAdminTime() {
+            const now = new Date();
+            document.getElementById('admin-time').innerText = now.toLocaleTimeString();
         }
+        setInterval(updateAdminTime, 1000);
+        updateAdminTime();
 
-        function updateLocalizedTime() {
-            const timeZone = i18nData[currentLang].timeZone || 'Asia/Shanghai';
-            const timeStr = new Intl.DateTimeFormat('en-GB', { timeZone, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).format(new Date());
-            document.getElementById('live-time').innerText = `${timeStr} (${currentLang.split('-')[1]})`;
-        }
-        setInterval(updateLocalizedTime, 1000);
-        updateLocalizedTime();
-
-        // 汇率换算比率
-        const rates = { USDT: 1.0, USD: 1.0, CNY: 7.25, HKD: 7.82, BTC: 1 / 83350.0 };
-        const symbols = { USDT: 'USDT', USD: '$', CNY: '¥', HKD: 'HK$', BTC: '₿' };
-
-        function updateHomeTotalVal() {
+        // 获取并刷新数据
+        function refreshData() {
             let assets = JSON.parse(localStorage.getItem('user_assets')) || { usdt: 100000.00 };
-            let totalUSDT = assets.usdt || 0;
-            let converted = totalUSDT * (rates[currentCurrency] || 1.0);
-            let symbolStr = symbols[currentCurrency] || 'USDT';
+            document.getElementById('stat-total-usdt').innerText = `$${(assets.usdt || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+            document.getElementById('admin-user-usdt').value = assets.usdt || 100000.00;
 
-            let valStr = currentCurrency === 'BTC' ? converted.toFixed(4) : converted.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-            document.getElementById('home-total-val').innerHTML = `${valStr} <span class="text-sm font-normal text-gray-400">${symbolStr}</span>`;
+            let allOrders = JSON.parse(localStorage.getItem('user_orders')) || {};
+            let totalActiveOrders = 0;
+            Object.keys(allOrders).forEach(sym => {
+                totalActiveOrders += (allOrders[sym] || []).length;
+            });
+            document.getElementById('stat-active-orders').innerText = totalActiveOrders;
+
+            let logs = JSON.parse(localStorage.getItem('user_history_logs')) || [];
+            document.getElementById('stat-total-logs').innerText = logs.length;
+
+            renderAdminOrders();
+            renderAdminLogs();
         }
 
-        function renderCoinList() {
-            const container = document.getElementById('coin-list');
+        // 修改用户余额
+        function updateUserBalance() {
+            let newVal = parseFloat(document.getElementById('admin-user-usdt').value);
+            if (isNaN(newVal) || newVal < 0) {
+                alert('请输入有效金额！');
+                return;
+            }
+            let assets = JSON.parse(localStorage.getItem('user_assets')) || { usdt: 100000.00 };
+            assets.usdt = newVal;
+            localStorage.setItem('user_assets', JSON.stringify(assets));
+
+            addAdminLog('管理员干预', `后台人工设置用户 USDT 余额为: $${newVal.toFixed(2)}`);
+            alert('🎉 修改成功！用户端刷新页面后将实时生效。');
+            refreshData();
+        }
+
+        function resetUserAssets() {
+            if (!confirm('确定要将用户资产重置为默认 $100,000 USDT 吗？')) return;
+            localStorage.setItem('user_assets', JSON.stringify({ usdt: 100000.00 }));
+            addAdminLog('管理员干预', '重置用户 USDT 资产为 $100,000.00');
+            alert('✅ 重置成功！');
+            refreshData();
+        }
+
+        // 渲染订单与后台强平
+        function renderAdminOrders() {
+            let allOrders = JSON.parse(localStorage.getItem('user_orders')) || {};
+            const tbody = document.getElementById('admin-orders-tbody');
+            tbody.innerHTML = '';
+
+            let hasOrders = false;
+
+            Object.keys(allOrders).forEach(symbol => {
+                let symbolOrders = allOrders[symbol] || [];
+                symbolOrders.forEach((order, index) => {
+                    hasOrders = true;
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-gray-800/50 transition">
+                            <td class="py-2.5 px-2 font-bold text-white">${symbol}/USDT</td>
+                            <td class="py-2.5 px-2"><span class="bg-gray-800 px-1.5 py-0.5 rounded text-[10px] text-okxGreen">${(order.mode || 'SPOT').toUpperCase()}</span></td>
+                            <td class="py-2.5 px-2">${order.type || 'BUY'} ${order.lev ? order.lev + 'x' : ''}</td>
+                            <td class="py-2.5 px-2 font-mono">${(order.price || 0).toFixed(order.price < 1 ? 6 : 2)}</td>
+                            <td class="py-2.5 px-2">${order.amount}</td>
+                            <td class="py-2.5 px-2 text-gray-400">${order.time || '-'}</td>
+                            <td class="py-2.5 px-2 text-right">
+                                <button onclick="protectedAction(() => adminForceClose('${symbol}', ${index}))" 
+                                    class="${isLoggedIn ? 'bg-okxRed/20 hover:bg-okxRed text-okxRed hover:text-white' : 'bg-gray-800 text-gray-500 cursor-not-allowed'} px-2 py-1 rounded text-[10px] transition">
+                                    ${isLoggedIn ? '强制平仓' : '🔒 需登录'}
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            });
+
+            if (!hasOrders) {
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-gray-500">暂无活跃持仓订单</td></tr>`;
+            }
+        }
+
+        // 后端强平逻辑
+        function adminForceClose(symbol, index) {
+            if (!confirm(`确定要强制平仓该笔 ${symbol}/USDT 订单吗？`)) return;
+
+            let allOrders = JSON.parse(localStorage.getItem('user_orders')) || {};
+            if (allOrders[symbol] && allOrders[symbol][index]) {
+                let order = allOrders[symbol][index];
+                allOrders[symbol].splice(index, 1);
+                localStorage.setItem('user_orders', JSON.stringify(allOrders));
+
+                addAdminLog('后台强平', `管理员强平订单 [${symbol}] 数量:${order.amount}`);
+                alert(`✅ 强平成功！已清除该笔订单。`);
+                refreshData();
+            }
+        }
+
+        // 渲染日志
+        function renderAdminLogs() {
+            let logs = JSON.parse(localStorage.getItem('user_history_logs')) || [];
+            const container = document.getElementById('admin-logs-container');
+            if (!container) return;
+
+            if (logs.length === 0) {
+                container.innerHTML = `<div class="text-gray-500 text-center py-4">暂无日志记录</div>`;
+                return;
+            }
+
             container.innerHTML = '';
-            topCoins.forEach((coin, index) => {
-                const isPos = coin.change >= 0;
+            logs.forEach(log => {
                 container.innerHTML += `
-                    <a href="./trade.html?symbol=${coin.symbol}" class="bg-okxCard p-3 rounded-lg border border-gray-800 flex justify-between items-center block hover:border-gray-600 transition">
+                    <div class="bg-gray-900 p-2.5 rounded border border-okxBorder flex justify-between items-center">
                         <div>
-                            <div class="font-bold text-white text-sm">${coin.symbol} / <span class="text-gray-400 text-xs">USDT</span></div>
-                            <div class="text-[10px] text-gray-500 mt-0.5">Vol ${coin.vol}</div>
+                            <span class="font-bold text-white mr-2">${log.action}</span>
+                            <span class="text-gray-400">${log.detail}</span>
                         </div>
-                        <div class="text-right">
-                            <div class="font-bold text-sm text-white" id="price-${index}">${coin.price < 1 ? coin.price.toFixed(6) : coin.price.toFixed(2)}</div>
-                            <div class="text-xs ${isPos ? 'text-okxGreen' : 'text-okxRed'} font-medium mt-0.5" id="change-${index}">${isPos ? '+' : ''}${coin.change.toFixed(2)}%</div>
-                        </div>
-                    </a>
+                        <span class="text-gray-500 font-mono text-[10px]">${log.time}</span>
+                    </div>
                 `;
             });
         }
-        renderCoinList();
 
-        // 弹窗逻辑
-        function openModal(type) {
-            const modal = document.getElementById('action-modal');
-            const titleEl = document.getElementById('modal-title');
-            const bodyEl = document.getElementById('modal-body');
-            const dict = i18nData[currentLang];
-            modal.classList.remove('hidden');
-
-            if (type === 'deposit') {
-                titleEl.innerText = dict['title-deposit'];
-                const trc20Addr = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";
-                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${trc20Addr}`;
-                bodyEl.innerHTML = `
-                    <div><label class="text-gray-400 block mb-1">${dict['lbl-network']}</label>
-                    <div class="bg-gray-900 border border-okxGreen text-okxGreen font-bold rounded p-1.5 text-center">TRON (TRC20)</div></div>
-                    <div class="flex flex-col items-center justify-center py-2 bg-gray-900/50 rounded border border-gray-800">
-                        <img src="${qrUrl}" class="w-28 h-28 bg-white p-1 rounded mb-2">
-                        <span class="text-[10px] text-gray-400 text-center px-2 break-all" id="dep-addr">${trc20Addr}</span>
-                    </div>
-                    <button onclick="copyAddr()" class="w-full bg-gray-700 text-white py-1.5 rounded font-bold">${dict['btn-copy']}</button>
-                    <button onclick="confirmDep()" class="w-full bg-okxGreen text-white py-2 rounded font-bold mt-1">${dict['btn-confirm-dep']}</button>
-                `;
-            } else if (type === 'withdraw') {
-                titleEl.innerText = dict['title-withdraw'];
-                bodyEl.innerHTML = `
-                    <div><label class="text-gray-400 block mb-1">${dict['lbl-address']}</label>
-                    <input type="text" placeholder="T..." class="w-full bg-gray-900 border border-gray-700 rounded p-1.5 text-white"></div>
-                    <div><label class="text-gray-400 block mb-1">${dict['lbl-amount']} (USDT)</label>
-                    <input type="text" id="wit-amt" placeholder="1000" class="w-full bg-gray-900 border border-gray-700 rounded p-1.5 text-white"></div>
-                    <button onclick="confirmWit()" class="w-full bg-red-600 text-white py-2 rounded font-bold mt-2">${dict['btn-confirm-wit']}</button>
-                `;
-            }
-        }
-        function closeModal() { document.getElementById('action-modal').classList.add('hidden'); }
-        function copyAddr() {
-            navigator.clipboard.writeText(document.getElementById('dep-addr').innerText).then(() => alert(i18nData[currentLang]['copy-success']));
-        }
-        function confirmDep() {
-            let assets = JSON.parse(localStorage.getItem('user_assets')) || { usdt: 100000.00 };
-            assets.usdt += 10000.00;
-            localStorage.setItem('user_assets', JSON.stringify(assets));
-            logHistory('充币 (Deposit)', '+10,000 USDT');
-            updateHomeTotalVal();
-            closeModal();
-            alert(i18nData[currentLang]['alert-dep']);
-        }
-        function confirmWit() {
-            let amt = parseFloat(document.getElementById('wit-amt').value);
-            if (isNaN(amt) || amt <= 0) { alert('请输入有效金额！'); return; }
-            let assets = JSON.parse(localStorage.getItem('user_assets')) || { usdt: 100000.00 };
-            if (assets.usdt < amt) { alert('可用余额不足！'); return; }
-            assets.usdt -= amt;
-            localStorage.setItem('user_assets', JSON.stringify(assets));
-            logHistory('提币 (Withdraw)', `-${amt} USDT`);
-            updateHomeTotalVal();
-            closeModal();
-            alert(i18nData[currentLang]['alert-wit']);
-        }
-        function logHistory(action, detail) {
+        function addAdminLog(action, detail) {
             let logs = JSON.parse(localStorage.getItem('user_history_logs')) || [];
             logs.unshift({ action, detail, time: new Date().toLocaleString() });
             localStorage.setItem('user_history_logs', JSON.stringify(logs));
         }
 
-        window.onload = function() { updateHomeTotalVal(); };
-        setInterval(updateHomeTotalVal, 1000);
+        function clearAdminLogs() {
+            if (!confirm('确定要清空全部日志记录吗？')) return;
+            localStorage.setItem('user_history_logs', JSON.stringify([]));
+            refreshData();
+        }
+
+        window.onload = function() {
+            checkAuthStatus();
+            refreshData();
+        };
     </script>
 </body>
 </html>
