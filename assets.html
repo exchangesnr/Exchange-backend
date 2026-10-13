@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>模拟交易所 - 资产与交易历史</title>
+    <title>交易所 - 资产与交易历史</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -51,7 +51,16 @@
     <!-- 资产总估值与操作按钮 -->
     <div class="p-3">
         <div class="bg-gradient-to-r from-okxCard to-gray-800 p-4 rounded-xl border border-gray-800 shadow-lg">
-            <div class="text-xs text-gray-400" data-i18n="total-equity">账户总资产折合</div>
+            <div class="flex justify-between items-center">
+                <div class="text-xs text-gray-400" data-i18n="total-equity">账户总资产折合</div>
+                <!-- 隐藏/显示金额的眼睛图标按钮 -->
+                <button onclick="toggleMaskBalance()" id="eye-btn" class="text-gray-400 hover:text-white focus:outline-none p-1">
+                    <svg id="eye-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                    </svg>
+                </button>
+            </div>
             <div class="text-2xl font-extrabold text-white mt-1" id="total-val">--</div>
             
             <div class="grid grid-cols-3 gap-2 mt-4">
@@ -77,7 +86,7 @@
         <div class="bg-okxCard rounded-lg border border-gray-800 divide-y divide-gray-800 text-xs" id="asset-coins-list"></div>
     </div>
 
-    <!-- 交易历史日志面板（跟随用户记录同步） -->
+    <!-- 交易历史日志面板 -->
     <div class="px-3 pt-4">
         <div class="text-xs text-gray-400 mb-2 px-1 font-bold" data-i18n="history-title">全局交易与流水日志</div>
         <div class="bg-okxCard rounded-lg border border-gray-800 p-3 space-y-2 max-h-48 overflow-y-auto text-xs" id="history-logs-container">
@@ -94,11 +103,20 @@
         </div>
     </div>
 
-    <!-- 优化移动端高度后的底部导航栏 -->
+    <!-- 底部导航栏 -->
     <nav class="fixed bottom-0 left-0 right-0 h-16 bg-okxCard border-t border-gray-800 flex justify-around items-center pb-[env(safe-area-inset-bottom)] z-50">
-        <a href="./market.html" class="flex-1 h-full text-gray-400 text-xs flex flex-col items-center justify-center font-bold" data-i18n="nav-market">行情</a>
-        <a href="./trade.html?symbol=BTC" class="flex-1 h-full text-gray-400 text-xs flex flex-col items-center justify-center font-bold" data-i18n="nav-trade">交易</a>
-        <a href="./assets.html" class="flex-1 h-full text-okxGreen text-xs flex flex-col items-center justify-center font-bold" data-i18n="nav-assets">资产</a>
+        <a href="./market.html" class="flex-1 h-full text-gray-400 text-xs flex flex-col items-center justify-center font-bold">
+            <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+            <span data-i18n="nav-market">行情</span>
+        </a>
+        <a href="./trade.html?symbol=BTC" class="flex-1 h-full text-gray-400 text-xs flex flex-col items-center justify-center font-bold">
+            <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+            <span data-i18n="nav-trade">交易</span>
+        </a>
+        <a href="./assets.html" class="flex-1 h-full text-okxGreen text-xs flex flex-col items-center justify-center font-bold">
+            <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
+            <span data-i18n="nav-assets">资产</span>
+        </a>
     </nav>
 
     <script>
@@ -112,8 +130,13 @@
                 'title-deposit': 'TRC20 链上充币', 'title-withdraw': '数字资产提现', 'title-transfer': '资金划转',
                 'lbl-network': '充币网络', 'lbl-amount': '数量', 'lbl-address': '充币地址',
                 'btn-copy': '复制地址', 'copy-success': '地址已复制！',
-                'btn-confirm-dep': '模拟充值 (+$10,000)', 'btn-confirm-wit': '确认提币', 'btn-confirm-tra': '确认划转',
-                'alert-dep': '🎉 充值成功！', 'alert-wit': '✅ 提币申请已提交！', 'alert-tra': '⇄ 划转成功！'
+                'btn-confirm-dep': '充值到账 (+$10,000)', 'btn-confirm-wit': '确认提币', 'btn-confirm-tra': '确认划转',
+                'alert-dep': '🎉 充值成功！', 'alert-wit': '✅ 提币申请已提交！', 'alert-tra': '⇄ 划转成功！',
+                'log-dep': '链上充币', 'log-dep-detail': '+10,000 USDT (TRC20)',
+                'log-wit': '提币提现', 'log-wit-detail': '提现 USDT',
+                'log-tra': '内部划转', 'log-tra-detail': '资金账户 ⇄ 交易账户',
+                'err-valid-amount': '请输入有效金额！', 'err-insufficient': '可用余额不足！',
+                'lbl-from': '从:', 'lbl-to': '至:', 'acc-fund': '资金账户', 'acc-trade': '交易账户'
             },
             'en-US': {
                 'assets-title': 'Overview', 'total-equity': 'Total Account Equity',
@@ -124,8 +147,13 @@
                 'title-deposit': 'On-chain Deposit', 'title-withdraw': 'Withdrawal', 'title-transfer': 'Transfer',
                 'lbl-network': 'Network', 'lbl-amount': 'Amount', 'lbl-address': 'Address',
                 'btn-copy': 'Copy', 'copy-success': 'Address copied!',
-                'btn-confirm-dep': 'Simulate Deposit (+$10,000)', 'btn-confirm-wit': 'Confirm Withdraw', 'btn-confirm-tra': 'Confirm Transfer',
-                'alert-dep': '🎉 Deposit successful!', 'alert-wit': '✅ Withdrawal submitted!', 'alert-tra': '⇄ Transfer successful!'
+                'btn-confirm-dep': 'Deposit Funds (+$10,000)', 'btn-confirm-wit': 'Confirm Withdraw', 'btn-confirm-tra': 'Confirm Transfer',
+                'alert-dep': '🎉 Deposit successful!', 'alert-wit': '✅ Withdrawal submitted!', 'alert-tra': '⇄ Transfer successful!',
+                'log-dep': 'On-chain Deposit', 'log-dep-detail': '+10,000 USDT (TRC20)',
+                'log-wit': 'Withdrawal', 'log-wit-detail': 'Withdraw USDT',
+                'log-tra': 'Transfer', 'log-tra-detail': 'Funding ⇄ Trading',
+                'err-valid-amount': 'Please enter a valid amount!', 'err-insufficient': 'Insufficient balance!',
+                'lbl-from': 'From:', 'lbl-to': 'To:', 'acc-fund': 'Funding Account', 'acc-trade': 'Trading Account'
             },
             'zh-HK': {
                 'assets-title': '資產總覽', 'total-equity': '賬戶總資產折合',
@@ -133,15 +161,19 @@
                 'crypto-list': '多幣種資產持倉', 'crypto-value': '折合估值',
                 'history-title': '全局交易與流水日志', 'history-empty': '暫無操作日志記錄',
                 'nav-market': '行情', 'nav-trade': '交易', 'nav-assets': '資產', 'timeZone': 'Asia/Hong_Kong',
-                'title-deposit': 'TRC20 鏈上充幣', 'title-withdraw': '數字資產提現', 'title-transfer': '資金劃轉',
-                'lbl-network': '充幣網絡', 'lbl-amount': '數量', 'lbl-address': '充幣地址',
+                'title-deposit': 'TRC20 鏈上充币', 'title-withdraw': '數字資產提現', 'title-transfer': '資金劃轉',
+                'lbl-network': '充币網絡', 'lbl-amount': '數量', 'lbl-address': '充币地址',
                 'btn-copy': '複製地址', 'copy-success': '地址已複製！',
-                'btn-confirm-dep': '模擬充值 (+$10,000)', 'btn-confirm-wit': '確認提幣', 'btn-confirm-tra': '確認劃轉',
-                'alert-dep': '🎉 充值成功！', 'alert-wit': '✅ 提幣申請已提交！', 'alert-tra': '⇄ 劃轉成功！'
+                'btn-confirm-dep': '充值到賬 (+$10,000)', 'btn-confirm-wit': '確認提幣', 'btn-confirm-tra': '確認劃轉',
+                'alert-dep': '🎉 充值成功！', 'alert-wit': '✅ 提幣申請已提交！', 'alert-tra': '⇄ 劃轉成功！',
+                'log-dep': '鏈上充币', 'log-dep-detail': '+10,000 USDT (TRC20)',
+                'log-wit': '提幣提現', 'log-wit-detail': '提現 USDT',
+                'log-tra': '內部劃轉', 'log-tra-detail': '資金賬戶 ⇄ 交易賬戶',
+                'err-valid-amount': '請輸入有效金額！', 'err-insufficient': '可用餘額不足！',
+                'lbl-from': '從:', 'lbl-to': '至:', 'acc-fund': '資金賬戶', 'acc-trade': '交易賬戶'
             }
         };
 
-        // 包含真实的交易所图标 URL 与 英文币名 (English Name)
         const topCoins = [
             { symbol: 'USDT', name: 'Tether', price: 1.00, iconUrl: 'https://assets.coingecko.com/coins/images/325/large/Tether.png' },
             { symbol: 'BTC', name: 'Bitcoin', price: 83350.00, iconUrl: 'https://assets.coingecko.com/coins/images/1/large/bitcoin.png' },
@@ -161,15 +193,40 @@
             { symbol: 'LTC', name: 'Litecoin', price: 82.40, iconUrl: 'https://assets.coingecko.com/coins/images/2/large/litecoin.png' },
             { symbol: 'UNI', name: 'Uniswap', price: 8.90, iconUrl: 'https://assets.coingecko.com/coins/images/12504/large/uniswap-uni.png' },
             { symbol: 'APT', name: 'Aptos', price: 9.50, iconUrl: 'https://assets.coingecko.com/coins/images/26455/large/aptos_round.png' },
-            { symbol: 'PEPE', name: 'Pepe', price: 0.000012, iconUrl: 'https://assets.coingecko.com/coins/images/29850/large/pepe-token.png' },
-            { symbol: 'ICP', name: 'Internet Computer', price: 9.20, iconUrl: 'https://assets.coingecko.com/coins/images/14470/large/Internet_Computer_logo.png' },
+            { symbol: 'PEPE', name: 'Pepe', price: 0.000012, iconUrl: 'https://cryptologos.cc/logos/pepe-pepe-logo.png' },
+            { symbol: 'ICP', name: 'Internet Computer', price: 9.20, iconUrl: 'https://cryptologos.cc/logos/internet-computer-icp-logo.png' },
             { symbol: 'RENDER', name: 'Render Token', price: 7.80, iconUrl: 'https://assets.coingecko.com/coins/images/11636/large/rndr.png' }
         ];
 
         let currentLang = localStorage.getItem('exchange_lang') || 'zh-CN';
         let currentCurrency = localStorage.getItem('exchange_currency') || 'USDT';
+        let isBalanceHidden = localStorage.getItem('exchange_balance_hidden') === 'true';
+        
         document.getElementById('lang-select').value = currentLang;
         document.getElementById('currency-select').value = currentCurrency;
+        updateEyeIconUI();
+
+        function toggleMaskBalance() {
+            isBalanceHidden = !isBalanceHidden;
+            localStorage.setItem('exchange_balance_hidden', isBalanceHidden);
+            updateEyeIconUI();
+            loadAssets();
+        }
+
+        function updateEyeIconUI() {
+            const eyeIcon = document.getElementById('eye-icon');
+            if (isBalanceHidden) {
+                eyeIcon.innerHTML = `
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a10.05 10.05 0 012.28-3.95m3.11-2.485A9.956 9.956 0 0112 5c4.478 0 8.268 2.943 9.542 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3l18 18"></path>
+                `;
+            } else {
+                eyeIcon.innerHTML = `
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                `;
+            }
+        }
 
         function changeLanguage(lang) {
             currentLang = lang;
@@ -178,8 +235,8 @@
                 const key = el.getAttribute('data-i18n');
                 if (i18nData[currentLang][key]) el.innerText = i18nData[currentLang][key];
             });
+            renderHistoryLogs();
         }
-        changeLanguage(currentLang);
 
         function changeValCurrency(curr) {
             currentCurrency = curr;
@@ -206,6 +263,12 @@
                 let convertedVal = valUSDT * (rates[currentCurrency] || 1.0);
                 let sym = symbols[currentCurrency] || 'USDT';
                 let valStr = currentCurrency === 'BTC' ? convertedVal.toFixed(4) : convertedVal.toFixed(2);
+                let displayAmount = coin.symbol === 'USDT' ? amount.toFixed(2) : amount.toFixed(4);
+
+                if (isBalanceHidden) {
+                    displayAmount = '****';
+                    valStr = '****';
+                }
 
                 container.innerHTML += `
                     <div class="p-3 flex justify-between items-center">
@@ -217,7 +280,7 @@
                             </div>
                         </div>
                         <div class="text-right">
-                            <div class="font-bold text-white">${coin.symbol === 'USDT' ? amount.toFixed(2) : amount.toFixed(4)}</div>
+                            <div class="font-bold text-white">${displayAmount}</div>
                             <div class="text-[10px] text-gray-500">≈ ${valStr} ${sym}</div>
                         </div>
                     </div>
@@ -226,8 +289,9 @@
 
             let finalTotalConverted = totalValUSDT * (rates[currentCurrency] || 1.0);
             let finalSym = symbols[currentCurrency] || 'USDT';
-            let finalTotalStr = currentCurrency === 'BTC' ? finalTotalConverted.toFixed(4) : finalTotalConverted.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-            document.getElementById('total-val').innerHTML = `${finalTotalStr} <span class="text-sm font-normal text-gray-400">${finalSym}</span>`;
+            let finalTotalStr = isBalanceHidden ? '********' : (currentCurrency === 'BTC' ? finalTotalConverted.toFixed(4) : finalTotalConverted.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+            
+            document.getElementById('total-val').innerHTML = `${finalTotalStr} <span class="text-sm font-normal text-gray-400">${isBalanceHidden ? '' : finalSym}</span>`;
 
             renderHistoryLogs();
         }
@@ -244,11 +308,14 @@
 
             container.innerHTML = '';
             logs.forEach(log => {
+                const actionText = log.actionKey && i18nData[currentLang][log.actionKey] ? i18nData[currentLang][log.actionKey] : log.action;
+                const detailText = log.detailKey && i18nData[currentLang][log.detailKey] ? (log.detailVal ? `${i18nData[currentLang][log.detailKey]} ${log.detailVal}` : i18nData[currentLang][log.detailKey]) : log.detail;
+
                 container.innerHTML += `
                     <div class="bg-gray-900 p-2 rounded border border-gray-800 flex justify-between items-center">
                         <div>
-                            <div class="font-bold text-white">${log.action}</div>
-                            <div class="text-[10px] text-gray-400 mt-0.5">${log.detail}</div>
+                            <div class="font-bold text-white">${actionText}</div>
+                            <div class="text-[10px] text-gray-400 mt-0.5">${detailText}</div>
                         </div>
                         <div class="text-[10px] text-gray-500">${log.time}</div>
                     </div>
@@ -289,10 +356,10 @@
             } else if (type === 'transfer') {
                 titleEl.innerText = dict['title-transfer'];
                 bodyEl.innerHTML = `
-                    <div class="flex items-center space-x-2 bg-gray-900 p-2 rounded border border-gray-800"><span class="text-gray-400">从:</span><span class="text-white font-bold">资金账户</span></div>
+                    <div class="flex items-center space-x-2 bg-gray-900 p-2 rounded border border-gray-800"><span class="text-gray-400">${dict['lbl-from']}</span><span class="text-white font-bold">${dict['acc-fund']}</span></div>
                     <div class="text-center text-gray-500">↓</div>
-                    <div class="flex items-center space-x-2 bg-gray-900 p-2 rounded border border-gray-800"><span class="text-gray-400">至:</span><span class="text-white font-bold">交易账户</span></div>
-                    <div><label class="text-gray-400 block mb-1">数量 (USDT)</label>
+                    <div class="flex items-center space-x-2 bg-gray-900 p-2 rounded border border-gray-800"><span class="text-gray-400">${dict['lbl-to']}</span><span class="text-white font-bold">${dict['acc-trade']}</span></div>
+                    <div><label class="text-gray-400 block mb-1">${dict['lbl-amount']} (USDT)</label>
                     <input type="text" id="tra-amt" placeholder="500" class="w-full bg-gray-900 border border-gray-700 rounded p-1.5 text-white"></div>
                     <button onclick="confirmTra()" class="w-full bg-blue-600 text-white py-2 rounded font-bold mt-2">${dict['btn-confirm-tra']}</button>
                 `;
@@ -306,42 +373,52 @@
             let assets = JSON.parse(localStorage.getItem('user_assets')) || { usdt: 100000.00 };
             assets.usdt += 10000.00;
             localStorage.setItem('user_assets', JSON.stringify(assets));
-            logHistory('链上充币 (Deposit)', '+10,000 USDT (TRC20)');
+            logHistory('log-dep', 'log-dep-detail');
             loadAssets();
             closeModal();
             alert(i18nData[currentLang]['alert-dep']);
         }
         function confirmWit() {
             let amt = parseFloat(document.getElementById('wit-amt').value);
-            if (isNaN(amt) || amt <= 0) { alert('请输入有效金额！'); return; }
+            if (isNaN(amt) || amt <= 0) { alert(i18nData[currentLang]['err-valid-amount']); return; }
             let assets = JSON.parse(localStorage.getItem('user_assets')) || { usdt: 100000.00 };
-            if (assets.usdt < amt) { alert('可用余额不足！'); return; }
+            if (assets.usdt < amt) { alert(i18nData[currentLang]['err-insufficient']); return; }
             assets.usdt -= amt;
             localStorage.setItem('user_assets', JSON.stringify(assets));
-            logHistory('提币提现 (Withdraw)', `-${amt} USDT`);
+            logHistory('log-wit', 'log-wit-detail', `-${amt} USDT`);
             loadAssets();
             closeModal();
             alert(i18nData[currentLang]['alert-wit']);
         }
         function confirmTra() {
             let amt = parseFloat(document.getElementById('tra-amt').value);
-            if (isNaN(amt) || amt <= 0) { alert('请输入有效划转金额！'); return; }
-            logHistory('内部划转 (Transfer)', `${amt} USDT (资金⇄交易)`);
+            if (isNaN(amt) || amt <= 0) { alert(i18nData[currentLang]['err-valid-amount']); return; }
+            logHistory('log-tra', 'log-tra-detail', `${amt} USDT`);
             loadAssets();
             closeModal();
             alert(i18nData[currentLang]['alert-tra']);
         }
-        function logHistory(action, detail) {
+        function logHistory(actionKey, detailKey, detailVal = '') {
             let logs = JSON.parse(localStorage.getItem('user_history_logs')) || [];
-            logs.unshift({ action, detail, time: new Date().toLocaleString() });
+            logs.unshift({ 
+                actionKey, 
+                detailKey, 
+                detailVal, 
+                action: i18nData[currentLang][actionKey] || actionKey, 
+                detail: detailVal ? `${i18nData[currentLang][detailKey] || detailKey} ${detailVal}` : (i18nData[currentLang][detailKey] || detailKey),
+                time: new Date().toLocaleString() 
+            });
             localStorage.setItem('user_history_logs', JSON.stringify(logs));
         }
 
-        window.onload = function() { loadAssets(); };
+        window.onload = function() { 
+            changeLanguage(currentLang);
+            loadAssets(); 
+        };
         setInterval(loadAssets, 1000);
     </script>
 
-    <!-- 🔽 无侵入式：自动后台风控控盘通信脚本 🔽 -->
+    <!-- 🔽 自动后台风控控盘通信脚本 🔽 -->
     <script>
     (function() {
         let backendWS = null;
