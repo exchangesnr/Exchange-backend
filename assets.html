@@ -141,28 +141,29 @@
             }
         };
 
+        // 包含真实的交易所图标 URL 与 英文币名 (English Name)
         const topCoins = [
-            { symbol: 'USDT', name: '泰达币', price: 1.00, icon: 'U', color: 'bg-blue-500/20 text-blue-400' },
-            { symbol: 'BTC', name: '比特币', price: 83350.00, icon: '₿', color: 'bg-yellow-500/20 text-yellow-400' },
-            { symbol: 'ETH', name: '以太坊', price: 3120.50, icon: 'Ξ', color: 'bg-indigo-500/20 text-indigo-400' },
-            { symbol: 'SOL', name: 'Solana', price: 185.20, icon: 'S', color: 'bg-purple-500/20 text-purple-400' },
-            { symbol: 'XRP', name: 'Ripple', price: 0.6250, icon: 'X', color: 'bg-gray-500/20 text-gray-300' },
-            { symbol: 'DOGE', name: '狗狗币', price: 0.1680, icon: 'Ð', color: 'bg-amber-500/20 text-amber-400' },
-            { symbol: 'ADA', name: 'Cardano', price: 0.4520, icon: 'A', color: 'bg-cyan-500/20 text-cyan-400' },
-            { symbol: 'TRX', name: '波场', price: 0.1240, icon: 'T', color: 'bg-red-500/20 text-red-400' },
-            { symbol: 'AVAX', name: '雪崩协议', price: 32.50, icon: 'AV', color: 'bg-rose-500/20 text-rose-400' },
-            { symbol: 'LINK', name: 'Chainlink', price: 14.80, icon: 'L', color: 'bg-blue-600/20 text-blue-300' },
-            { symbol: 'SUI', name: 'Sui', price: 1.95, icon: 'SU', color: 'bg-sky-500/20 text-sky-400' },
-            { symbol: 'SHIB', name: '柴犬币', price: 0.000022, icon: 'SH', color: 'bg-orange-500/20 text-orange-400' },
-            { symbol: 'BCH', name: '比特币现金', price: 380.00, icon: 'B+', color: 'bg-emerald-500/20 text-emerald-400' },
-            { symbol: 'DOT', name: '波卡', price: 7.20, icon: 'D', color: 'bg-pink-500/20 text-pink-400' },
-            { symbol: 'NEAR', name: 'NEAR Protocol', price: 5.60, icon: 'N', color: 'bg-zinc-500/20 text-zinc-300' },
-            { symbol: 'LTC', name: '莱特币', price: 82.40, icon: 'Ł', color: 'bg-slate-500/20 text-slate-300' },
-            { symbol: 'UNI', name: 'Uniswap', price: 8.90, icon: 'U+', color: 'bg-fuchsia-500/20 text-fuchsia-400' },
-            { symbol: 'APT', name: 'Aptos', price: 9.50, icon: 'AP', color: 'bg-teal-500/20 text-teal-400' },
-            { symbol: 'PEPE', name: '佩佩币', price: 0.000012, icon: 'P', color: 'bg-lime-500/20 text-lime-400' },
-            { symbol: 'ICP', name: '互联网计算机', price: 9.20, icon: 'I', color: 'bg-violet-500/20 text-violet-400' },
-            { symbol: 'RENDER', name: 'Render', price: 7.80, icon: 'R', color: 'bg-red-600/20 text-red-300' }
+            { symbol: 'USDT', name: 'Tether', price: 1.00, iconUrl: 'https://assets.coingecko.com/coins/images/325/large/Tether.png' },
+            { symbol: 'BTC', name: 'Bitcoin', price: 83350.00, iconUrl: 'https://assets.coingecko.com/coins/images/1/large/bitcoin.png' },
+            { symbol: 'ETH', name: 'Ethereum', price: 3120.50, iconUrl: 'https://assets.coingecko.com/coins/images/279/large/ethereum.png' },
+            { symbol: 'SOL', name: 'Solana', price: 185.20, iconUrl: 'https://assets.coingecko.com/coins/images/4128/large/solana.png' },
+            { symbol: 'XRP', name: 'XRP', price: 0.6250, iconUrl: 'https://assets.coingecko.com/coins/images/44/large/xrp-symbol-white-128.png' },
+            { symbol: 'DOGE', name: 'Dogecoin', price: 0.1680, iconUrl: 'https://assets.coingecko.com/coins/images/5/large/dogecoin.png' },
+            { symbol: 'ADA', name: 'Cardano', price: 0.4520, iconUrl: 'https://assets.coingecko.com/coins/images/975/large/cardano.png' },
+            { symbol: 'TRX', name: 'TRON', price: 0.1240, iconUrl: 'https://assets.coingecko.com/coins/images/1094/large/tron-logo.png' },
+            { symbol: 'AVAX', name: 'Avalanche', price: 32.50, iconUrl: 'https://assets.coingecko.com/coins/images/12559/large/Avalanche_Circle_RedWhite_Trans.png' },
+            { symbol: 'LINK', name: 'Chainlink', price: 14.80, iconUrl: 'https://assets.coingecko.com/coins/images/877/large/chainlink-new-logo.png' },
+            { symbol: 'SUI', name: 'Sui', price: 1.95, iconUrl: 'https://assets.coingecko.com/coins/images/26375/large/sui-ocean-square.png' },
+            { symbol: 'SHIB', name: 'Shiba Inu', price: 0.000022, iconUrl: 'https://assets.coingecko.com/coins/images/11939/large/shiba.png' },
+            { symbol: 'BCH', name: 'Bitcoin Cash', price: 380.00, iconUrl: 'https://assets.coingecko.com/coins/images/780/large/bitcoin-cash-circle.png' },
+            { symbol: 'DOT', name: 'Polkadot', price: 7.20, iconUrl: 'https://assets.coingecko.com/coins/images/12171/large/polkadot.png' },
+            { symbol: 'NEAR', name: 'NEAR Protocol', price: 5.60, iconUrl: 'https://assets.coingecko.com/coins/images/10365/large/near.png' },
+            { symbol: 'LTC', name: 'Litecoin', price: 82.40, iconUrl: 'https://assets.coingecko.com/coins/images/2/large/litecoin.png' },
+            { symbol: 'UNI', name: 'Uniswap', price: 8.90, iconUrl: 'https://assets.coingecko.com/coins/images/12504/large/uniswap-uni.png' },
+            { symbol: 'APT', name: 'Aptos', price: 9.50, iconUrl: 'https://assets.coingecko.com/coins/images/26455/large/aptos_round.png' },
+            { symbol: 'PEPE', name: 'Pepe', price: 0.000012, iconUrl: 'https://assets.coingecko.com/coins/images/29850/large/pepe-token.png' },
+            { symbol: 'ICP', name: 'Internet Computer', price: 9.20, iconUrl: 'https://assets.coingecko.com/coins/images/14470/large/Internet_Computer_logo.png' },
+            { symbol: 'RENDER', name: 'Render Token', price: 7.80, iconUrl: 'https://assets.coingecko.com/coins/images/11636/large/rndr.png' }
         ];
 
         let currentLang = localStorage.getItem('exchange_lang') || 'zh-CN';
@@ -208,11 +209,11 @@
 
                 container.innerHTML += `
                     <div class="p-3 flex justify-between items-center">
-                        <div class="flex items-center space-x-2">
-                            <div class="w-7 h-7 rounded-full ${coin.color} font-bold flex items-center justify-center text-xs">${coin.icon}</div>
+                        <div class="flex items-center space-x-2.5">
+                            <img src="${coin.iconUrl}" alt="${coin.symbol}" class="w-7 h-7 rounded-full object-cover bg-gray-800 p-0.5" onerror="this.onerror=null;this.src='https://assets.coingecko.com/coins/images/325/large/Tether.png';">
                             <div>
                                 <div class="font-bold text-white">${coin.symbol}</div>
-                                <div class="text-[10px] text-gray-500">${coin.name}</div>
+                                <div class="text-[10px] text-gray-400 font-medium">${coin.name}</div>
                             </div>
                         </div>
                         <div class="text-right">
