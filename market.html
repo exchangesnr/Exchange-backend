@@ -27,13 +27,17 @@
 </head>
 <body class="bg-okxDark text-gray-200 font-sans">
 
-    <!-- 顶栏：多语言、时区与法币/币种切换 -->
+    <!-- 顶栏：多语言、时区与法币/币种切换、用户登录入口 -->
     <header class="flex justify-between items-center p-3 bg-okxCard border-b border-gray-800 sticky top-0 z-50">
         <div class="flex items-center space-x-2">
             <span class="text-xs text-gray-400" id="live-time">00:00:00</span>
             <span id="ws-status" class="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">连接中...</span>
         </div>
         <div class="flex items-center space-x-1.5">
+            <!-- 用户登录/注册入口按钮 -->
+            <button onclick="openUserCenter()" id="user-btn" class="text-[10px] bg-okxGreen/20 text-okxGreen border border-okxGreen/30 px-2 py-1 rounded font-bold truncate max-w-[100px]">
+                未登录
+            </button>
             <select id="currency-select" onchange="changeValCurrency(this.value)" class="bg-gray-900 border border-gray-700 text-gray-200 text-xs rounded px-1.5 py-1 focus:outline-none">
                 <option value="USDT">USDT</option>
                 <option value="USD">USD ($)</option>
@@ -83,7 +87,16 @@
         </div>
     </div>
 
-    <!-- 底部导航栏：与 assets.html 保持完全一致的精美图标 -->
+    <!-- 用户登录/注册/KYC 中心弹窗 -->
+    <div id="user-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-okxCard w-full max-w-sm rounded-xl border border-gray-700 p-4 text-xs space-y-3 relative shadow-2xl my-auto">
+            <button onclick="closeUserModal()" class="absolute top-3 right-3 text-gray-400 hover:text-white text-base font-bold">&times;</button>
+            <div id="user-modal-title" class="text-sm font-bold text-white border-b border-gray-800 pb-2"></div>
+            <div id="user-modal-body" class="space-y-3"></div>
+        </div>
+    </div>
+
+    <!-- 底部导航栏 -->
     <nav class="fixed bottom-0 left-0 right-0 h-16 bg-okxCard border-t border-gray-800 flex justify-around items-center pb-[env(safe-area-inset-bottom)] z-50">
         <a href="./market.html" class="flex-1 h-full text-okxGreen text-xs flex flex-col items-center justify-center font-bold">
             <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"></path></svg>
@@ -100,16 +113,58 @@
     </nav>
 
     <script>
+        // --- 国际化字典：全面覆盖登录、注册、真实邮件验证码与高级 KYC 认证 ---
         const i18nData = {
             'zh-CN': {
                 'total-equity': '账户总资产折合', 'btn-deposit': '链上充币', 'btn-withdraw': '快捷提币',
                 'th-pair': '币种 / 成交额', 'th-price': '最新价 / 24h涨跌',
                 'nav-market': '行情', 'nav-trade': '交易', 'nav-assets': '资产', 'timeZone': 'Asia/Shanghai',
-                'title-deposit': 'TRC20 链上充币', 'title-withdraw': '数字资产提现',
+                'title-deposit': 'TRC20 鏈上充币', 'title-withdraw': '数字资产提现',
                 'lbl-network': '充币网络', 'lbl-amount': '数量', 'lbl-address': '充币地址',
                 'btn-copy': '复制地址', 'copy-success': '充币地址已复制！',
                 'btn-confirm-dep': '模拟链上到账 (+$10,000)', 'btn-confirm-wit': '确认提币',
-                'alert-dep': '🎉 充值成功！USDT 已实时入账。', 'alert-wit': '✅ 提币申请已提交！'
+                'alert-dep': '🎉 充值成功！USDT 已实时入账。', 'alert-wit': '✅ 提币申请已提交！',
+                // 用户认证系统
+                'btn-not-login': '登录 / 注册',
+                'login-title': '账户登录',
+                'register-title': '注册新账户',
+                'user-center-title': '用户中心',
+                'lbl-username': '用户名',
+                'lbl-password': '密码',
+                'lbl-birthday': '生日',
+                'lbl-address': '家庭住址',
+                'lbl-contact': '电子邮箱',
+                'lbl-code': '验证码',
+                'btn-get-code': '获取验证码',
+                'btn-login': '登录',
+                'btn-register': '确认注册',
+                'no-account': '还没有账号？',
+                'to-register': '立即注册',
+                'has-account': '已有账号？',
+                'to-login': '去登录',
+                'kyc-title': '高级 KYC 实名认证',
+                'kyc-type': '选择证件类型',
+                'doc-type-1': '身份证',
+                'doc-type-2': '护照',
+                'doc-type-3': '行驶证',
+                'lbl-doc-photo': '上传证件照片 (正反面/信息页)',
+                'lbl-hand-photo': '上传手持证件照片',
+                'file-btn-text': '选择文件',
+                'file-not-chosen': '未选择文件',
+                'btn-submit-kyc': '提交高级认证审核',
+                'kyc-verified': '✓ 您已完成高级KYC认证',
+                'status-unverified': '未认证',
+                'status-verified': '已认证',
+                'btn-logout': '退出登录',
+                'err-fill-all': '请完整填写所有注册信息及验证码！',
+                'err-contact-empty': '请先输入电子邮箱！',
+                'err-user-exists': '该用户名已存在，请直接登录！',
+                'success-reg': '🎉 注册成功并已自动登录！',
+                'err-login': '用户名或密码错误！',
+                'welcome': '欢迎回来，',
+                'logout-msg': '已安全退出登录',
+                'err-kyc-files': '请同时上传证件照片和手持证件照片！',
+                'success-kyc': '🎉 高级认证审核通过！'
             },
             'en-US': {
                 'total-equity': 'Total Account Equity', 'btn-deposit': 'Deposit', 'btn-withdraw': 'Withdraw',
@@ -119,19 +174,409 @@
                 'lbl-network': 'Network', 'lbl-amount': 'Amount', 'lbl-address': 'Address',
                 'btn-copy': 'Copy', 'copy-success': 'Address copied!',
                 'btn-confirm-dep': 'Simulate Deposit (+$10,000)', 'btn-confirm-wit': 'Confirm Withdraw',
-                'alert-dep': '🎉 Deposit successful!', 'alert-wit': '✅ Withdrawal submitted!'
+                'alert-dep': '🎉 Deposit successful!', 'alert-wit': '✅ Withdrawal submitted!',
+                // 用户认证系统
+                'btn-not-login': 'Sign In / Up',
+                'login-title': 'Account Login',
+                'register-title': 'Register Account',
+                'user-center-title': 'User Center',
+                'lbl-username': 'Username',
+                'lbl-password': 'Password',
+                'lbl-birthday': 'Birthday',
+                'lbl-address': 'Home Address',
+                'lbl-contact': 'Email Address',
+                'lbl-code': 'Verification Code',
+                'btn-get-code': 'Get Code',
+                'btn-login': 'Login',
+                'btn-register': 'Register',
+                'no-account': 'No account?',
+                'to-register': 'Sign Up',
+                'has-account': 'Have an account?',
+                'to-login': 'Sign In',
+                'kyc-title': 'Advanced KYC Verification',
+                'kyc-type': 'Select ID Type',
+                'doc-type-1': 'ID Card',
+                'doc-type-2': 'Passport',
+                'doc-type-3': 'Driver License',
+                'lbl-doc-photo': 'Upload ID Document Photo',
+                'lbl-hand-photo': 'Upload Handheld ID Photo',
+                'file-btn-text': 'Browse',
+                'file-not-chosen': 'No file chosen',
+                'btn-submit-kyc': 'Submit for Review',
+                'kyc-verified': '✓ Advanced KYC Verified',
+                'status-unverified': 'Unverified',
+                'status-verified': 'Verified',
+                'btn-logout': 'Log Out',
+                'err-fill-all': 'Please fill in all registration fields & code!',
+                'err-contact-empty': 'Please enter email address first!',
+                'err-user-exists': 'Username already exists, please login!',
+                'success-reg': '🎉 Registration successful & logged in!',
+                'err-login': 'Invalid username or password!',
+                'welcome': 'Welcome back, ',
+                'logout-msg': 'Logged out successfully',
+                'err-kyc-files': 'Please upload both ID and handheld photos!',
+                'success-kyc': '🎉 KYC verification approved!'
             },
             'zh-HK': {
                 'total-equity': '賬戶總資產折合', 'btn-deposit': '鏈上充幣', 'btn-withdraw': '快捷提幣',
                 'th-pair': '幣種 / 成交額', 'th-price': '最新價 / 24h漲跌',
                 'nav-market': '行情', 'nav-trade': '交易', 'nav-assets': '資產', 'timeZone': 'Asia/Hong_Kong',
-                'title-deposit': 'TRC20 鏈上充幣', 'title-withdraw': '數字資產提現',
+                'title-deposit': 'TRC20 鏈上充币', 'title-withdraw': '數字資產提現',
                 'lbl-network': '充幣網絡', 'lbl-amount': '數量', 'lbl-address': '充幣地址',
                 'btn-copy': '複製地址', 'copy-success': '充幣地址已複製！',
                 'btn-confirm-dep': '模擬鏈上到賬 (+$10,000)', 'btn-confirm-wit': '確認提幣',
-                'alert-dep': '🎉 充值成功！USDT 已實時入賬。', 'alert-wit': '✅ 提幣申請已提交！'
+                'alert-dep': '🎉 充值成功！USDT 已實時入賬。', 'alert-wit': '✅ 提幣申請已提交！',
+                // 用户认证系统
+                'btn-not-login': '登入 / 註冊',
+                'login-title': '賬戶登入',
+                'register-title': '註冊新賬戶',
+                'user-center-title': '用戶中心',
+                'lbl-username': '用戶名',
+                'lbl-password': '密碼',
+                'lbl-birthday': '生日',
+                'lbl-address': '家庭住址',
+                'lbl-contact': '電子郵箱',
+                'lbl-code': '驗證碼',
+                'btn-get-code': '獲取驗證碼',
+                'btn-login': '登入',
+                'btn-register': '確認註冊',
+                'no-account': '還沒有賬號？',
+                'to-register': '立即註冊',
+                'has-account': '已有賬號？',
+                'to-login': '去登入',
+                'kyc-title': '高級 KYC 實名認證',
+                'kyc-type': '選擇證件類型',
+                'doc-type-1': '身份證',
+                'doc-type-2': '護照',
+                'doc-type-3': '駕駛證',
+                'lbl-doc-photo': '上傳證件照片',
+                'lbl-hand-photo': '上傳手持證件照片',
+                'file-btn-text': '瀏覽',
+                'file-not-chosen': '未選擇文件',
+                'btn-submit-kyc': '提交高級認證審核',
+                'kyc-verified': '✓ 您已完成高級KYC認證',
+                'status-unverified': '未認證',
+                'status-verified': '已認證',
+                'btn-logout': '退出登入',
+                'err-fill-all': '請完整填寫所有註冊信息及驗證碼！',
+                'err-contact-empty': '請先輸入電子郵箱！',
+                'err-user-exists': '該用戶名已存在，請直接登入！',
+                'success-reg': '🎉 註冊成功並已自動登入！',
+                'err-login': '用戶名或密碼錯誤！',
+                'welcome': '歡迎回來，',
+                'logout-msg': '已安全退出登入',
+                'err-kyc-files': '請同時上傳證件照片和手持證件照片！',
+                'success-kyc': '🎉 高級認證審核通過！'
             }
         };
+
+        // --- 多用户与隔离存储架构 ---
+        function getCurrentUser() {
+            return localStorage.getItem('exchange_current_user') || null;
+        }
+        function getUserStorageKey(key) {
+            const user = getCurrentUser() || 'guest';
+            return `user_${user}_${key}`;
+        }
+
+        function updateLoginButtonDisplay() {
+            const user = getCurrentUser();
+            const btn = document.getElementById('user-btn');
+            const dict = i18nData[currentLang];
+            if (btn) {
+                if (user) {
+                    btn.innerText = user;
+                    btn.className = "text-[10px] bg-okxGreen/20 text-okxGreen border border-okxGreen/30 px-2 py-1 rounded font-bold truncate max-w-[100px]";
+                } else {
+                    btn.innerText = dict['btn-not-login'] || '登录 / 注册';
+                    btn.className = "text-[10px] bg-blue-500/20 text-blue-400 border border-blue-500/30 px-2 py-1 rounded font-bold truncate max-w-[100px]";
+                }
+            }
+        }
+
+        function openUserCenter() {
+            const user = getCurrentUser();
+            if (!user) {
+                renderLoginView();
+            } else {
+                renderUserProfileView(user);
+            }
+            document.getElementById('user-modal').classList.remove('hidden');
+        }
+        function closeUserModal() {
+            document.getElementById('user-modal').classList.add('hidden');
+        }
+
+        function renderLoginView() {
+            const dict = i18nData[currentLang];
+            document.getElementById('user-modal-title').innerText = dict['login-title'];
+            document.getElementById('user-modal-body').innerHTML = `
+                <div><label class="text-gray-400 block mb-1">${dict['lbl-username']}</label>
+                <input type="text" id="login-username" class="w-full bg-gray-900 border border-gray-700 rounded p-1.5 text-white"></div>
+                <div><label class="text-gray-400 block mb-1">${dict['lbl-password']}</label>
+                <input type="password" id="login-password" class="w-full bg-gray-900 border border-gray-700 rounded p-1.5 text-white"></div>
+                <button onclick="handleLoginSubmit()" class="w-full bg-okxGreen text-white py-2 rounded font-bold mt-2">${dict['btn-login']}</button>
+                <div class="text-center pt-2 text-gray-400">${dict['no-account']} <button onclick="renderRegisterView()" class="text-okxGreen underline font-bold">${dict['to-register']}</button></div>
+            `;
+        }
+
+        function renderRegisterView() {
+            const dict = i18nData[currentLang];
+            document.getElementById('user-modal-title').innerText = dict['register-title'];
+            document.getElementById('user-modal-body').innerHTML = `
+                <div><label class="text-gray-400 block mb-1">${dict['lbl-username']} *</label>
+                <input type="text" id="reg-username" class="w-full bg-gray-900 border border-gray-700 rounded p-1.5 text-white"></div>
+                <div><label class="text-gray-400 block mb-1">${dict['lbl-password']} *</label>
+                <input type="password" id="reg-password" class="w-full bg-gray-900 border border-gray-700 rounded p-1.5 text-white"></div>
+                <div><label class="text-gray-400 block mb-1">${dict['lbl-birthday']} *</label>
+                <input type="date" id="reg-birthday" class="w-full bg-gray-900 border border-gray-700 rounded p-1.5 text-white"></div>
+                <div><label class="text-gray-400 block mb-1">${dict['lbl-address']} *</label>
+                <input type="text" id="reg-address" class="w-full bg-gray-900 border border-gray-700 rounded p-1.5 text-white"></div>
+                <div>
+                    <label class="text-gray-400 block mb-1">${dict['lbl-contact']} *</label>
+                    <div class="flex space-x-1.5">
+                        <input type="email" id="reg-contact" placeholder="name@example.com" class="flex-1 bg-gray-900 border border-gray-700 rounded p-1.5 text-white">
+                        <button onclick="sendVerificationCode()" class="bg-gray-700 hover:bg-gray-600 text-white px-2 py-1.5 rounded text-[11px] font-bold whitespace-nowrap cursor-pointer">${dict['btn-get-code']}</button>
+                    </div>
+                </div>
+                <div>
+                    <label class="text-gray-400 block mb-1">${dict['lbl-code']} *</label>
+                    <input type="text" id="reg-code" placeholder="6-digit" class="w-full bg-gray-900 border border-gray-700 rounded p-1.5 text-white">
+                </div>
+                <button onclick="handleRegisterSubmit()" class="w-full bg-blue-600 text-white py-2 rounded font-bold mt-2">${dict['btn-register']}</button>
+                <div class="text-center pt-2 text-gray-400">${dict['has-account']} <button onclick="renderLoginView()" class="text-okxGreen underline font-bold">${dict['to-login']}</button></div>
+            `;
+        }
+
+        // --- 核心更新：连接真实 Node.js 后端 API 发送真实邮件验证码 ---
+        async function sendVerificationCode() {
+            const dict = i18nData[currentLang];
+            const contactVal = document.getElementById('reg-contact').value.trim();
+            if (!contactVal) {
+                alert(dict['err-contact-empty']);
+                return;
+            }
+
+            try {
+                let response = await fetch('http://localhost:3000/api/send-code', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: contactVal })
+                });
+                let result = await response.json();
+                
+                if (result.success) {
+                    alert(currentLang === 'en-US' ? '✅ Verification code sent to your email!' : '✅ 验证码已成功发送至您的真实邮箱，请注意查收！');
+                } else {
+                    alert('发送失败: ' + (result.message || '未知错误'));
+                }
+            } catch (error) {
+                console.error(error);
+                alert('无法连接到后端服务器 (http://localhost:3000)，请确保 Node.js 正在运行！');
+            }
+        }
+
+        function renderUserProfileView(username) {
+            const dict = i18nData[currentLang];
+            let usersDb = JSON.parse(localStorage.getItem('exchange_users_db')) || {};
+            let userInfo = usersDb[username] || {};
+            let kyc = userInfo.kyc || { status: dict['status-unverified'], type: '' };
+
+            const customFileStyle = `<style>
+                .file-upload-wrapper {
+                    position: relative;
+                    display: flex;
+                    align-items: center;
+                    background: #111827;
+                    border: 1px solid #374151;
+                    border-radius: 0.375rem;
+                    padding: 4px 8px;
+                    overflow: hidden;
+                }
+                .file-upload-wrapper input[type="file"] {
+                    position: absolute;
+                    left: 0;
+                    top: 0;
+                    opacity: 0;
+                    width: 100%;
+                    height: 100%;
+                    cursor: pointer;
+                }
+                .file-custom-btn {
+                    background: #374151;
+                    color: white;
+                    padding: 3px 8px;
+                    border-radius: 4px;
+                    font-size: 10px;
+                    font-weight: bold;
+                    margin-right: 8px;
+                    white-space: nowrap;
+                }
+                .file-name-display {
+                    font-size: 10px;
+                    color: #9ca3af;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+            </style>`;
+
+            document.getElementById('user-modal-title').innerText = `${dict['user-center-title']}: ${username}`;
+            document.getElementById('user-modal-body').innerHTML = customFileStyle + `
+                <div class="bg-gray-900 p-2.5 rounded border border-gray-800 space-y-1 text-gray-300">
+                    <div>${dict['lbl-birthday']}: <span class="text-white">${userInfo.birthday || '-'}</span></div>
+                    <div>${dict['lbl-address']}: <span class="text-white">${userInfo.address || '-'}</span></div>
+                    <div>${dict['lbl-contact']}: <span class="text-white">${userInfo.contact || '-'}</span></div>
+                    <div>KYC: <span class="${kyc.status===dict['status-verified']?'text-okxGreen':'text-amber-400'} font-bold">${kyc.status}</span></div>
+                </div>
+
+                ${kyc.status !== dict['status-verified'] ? `
+                    <div class="border-t border-gray-800 pt-2 space-y-2">
+                        <div class="font-bold text-white">${dict['kyc-title']}</div>
+                        <div>
+                            <label class="text-gray-400 block mb-1">${dict['kyc-type']}</label>
+                            <select id="kyc-type" class="w-full bg-gray-900 border border-gray-700 rounded p-1.5 text-white">
+                                <option value="身份证">${dict['doc-type-1']}</option>
+                                <option value="护照">${dict['doc-type-2']}</option>
+                                <option value="行驶证">${dict['doc-type-3']}</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-gray-400 block mb-1">${dict['lbl-doc-photo']}</label>
+                            <div class="file-upload-wrapper">
+                                <span class="file-custom-btn">${dict['file-btn-text']}</span>
+                                <span class="file-name-display" id="doc-file-name">${dict['file-not-chosen']}</span>
+                                <input type="file" id="kyc-doc-file" accept="image/*" onchange="updateFileName(this, 'doc-file-name')">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-gray-400 block mb-1">${dict['lbl-hand-photo']}</label>
+                            <div class="file-upload-wrapper">
+                                <span class="file-custom-btn">${dict['file-btn-text']}</span>
+                                <span class="file-name-display" id="hand-file-name">${dict['file-not-chosen']}</span>
+                                <input type="file" id="kyc-hand-file" accept="image/*" onchange="updateFileName(this, 'hand-file-name')">
+                            </div>
+                        </div>
+                        <button onclick="submitKyc()" class="w-full bg-okxGreen text-white py-2 rounded font-bold">${dict['btn-submit-kyc']}</button>
+                    </div>
+                ` : `<div class="text-okxGreen text-center font-bold py-1">${dict['kyc-verified']}</div>`}
+
+                <button onclick="handleLogout()" class="w-full bg-red-600/80 text-white py-1.5 rounded font-bold mt-3">${dict['btn-logout']}</button>
+            `;
+        }
+
+        function updateFileName(input, displayId) {
+            const displayEl = document.getElementById(displayId);
+            const dict = i18nData[currentLang];
+            if (input.files && input.files[0]) {
+                displayEl.innerText = input.files[0].name;
+                displayEl.style.color = "#ffffff";
+            } else {
+                displayEl.innerText = dict['file-not-chosen'];
+                displayEl.style.color = "#9ca3af";
+            }
+        }
+
+        // --- 核心更新：提交注册，交由 Node.js 后端校验真实验证码 ---
+        async function handleRegisterSubmit() {
+            const dict = i18nData[currentLang];
+            const username = document.getElementById('reg-username').value.trim();
+            const password = document.getElementById('reg-password').value.trim();
+            const birthday = document.getElementById('reg-birthday').value;
+            const address = document.getElementById('reg-address').value.trim();
+            const contact = document.getElementById('reg-contact').value.trim();
+            const inputCode = document.getElementById('reg-code').value.trim();
+
+            if (!username || !password || !birthday || !address || !contact || !inputCode) {
+                alert(dict['err-fill-all']);
+                return;
+            }
+
+            let usersDb = JSON.parse(localStorage.getItem('exchange_users_db')) || {};
+            if (usersDb[username]) {
+                alert(dict['err-user-exists']);
+                return;
+            }
+
+            try {
+                let response = await fetch('http://localhost:3000/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password, birthday, address, contact, code: inputCode })
+                });
+                let result = await response.json();
+
+                if (result.success) {
+                    usersDb[username] = { password, birthday, address, contact, kyc: { status: dict['status-unverified'] } };
+                    localStorage.setItem('exchange_users_db', JSON.stringify(usersDb));
+
+                    localStorage.setItem('exchange_current_user', username);
+                    let userAssetsKey = getUserStorageKey('assets');
+                    if (!localStorage.getItem(userAssetsKey)) {
+                        localStorage.setItem(userAssetsKey, JSON.stringify({ usdt: 100000.00 }));
+                    }
+
+                    alert(dict['success-reg']);
+                    closeUserModal();
+                    updateLoginButtonDisplay();
+                    updateHomeTotalVal();
+                } else {
+                    alert(result.message || '注册失败，验证码错误或已过期');
+                }
+            } catch (error) {
+                console.error(error);
+                alert('后端连接异常，请检查服务器状态');
+            }
+        }
+
+        function handleLoginSubmit() {
+            const dict = i18nData[currentLang];
+            const username = document.getElementById('login-username').value.trim();
+            const password = document.getElementById('login-password').value.trim();
+
+            let usersDb = JSON.parse(localStorage.getItem('exchange_users_db')) || {};
+            if (!usersDb[username] || usersDb[username].password !== password) {
+                alert(dict['err-login']);
+                return;
+            }
+
+            localStorage.setItem('exchange_current_user', username);
+            alert(`${dict['welcome']}${username}`);
+            closeUserModal();
+            updateLoginButtonDisplay();
+            updateHomeTotalVal();
+        }
+
+        function handleLogout() {
+            const dict = i18nData[currentLang];
+            localStorage.removeItem('exchange_current_user');
+            alert(dict['logout-msg']);
+            closeUserModal();
+            updateLoginButtonDisplay();
+            updateHomeTotalVal();
+        }
+
+        function submitKyc() {
+            const dict = i18nData[currentLang];
+            const user = getCurrentUser();
+            if (!user) return;
+            const type = document.getElementById('kyc-type').value;
+            const docFile = document.getElementById('kyc-doc-file').files[0];
+            const handFile = document.getElementById('kyc-hand-file').files[0];
+
+            if (!docFile || !handFile) {
+                alert(dict['err-kyc-files']);
+                return;
+            }
+
+            let usersDb = JSON.parse(localStorage.getItem('exchange_users_db')) || {};
+            if (usersDb[user]) {
+                usersDb[user].kyc = { status: dict['status-verified'], type, time: new Date().toLocaleString() };
+                localStorage.setItem('exchange_users_db', JSON.stringify(usersDb));
+                alert(dict['success-kyc']);
+                renderUserProfileView(user);
+            }
+        }
 
         const topCoins = [
             { symbol: 'BTC', name: 'Bitcoin', price: 83350.00, change: 2.45, vol: '3.82B', iconUrl: 'https://assets.coingecko.com/coins/images/1/large/bitcoin.png' },
@@ -168,6 +613,13 @@
                 const key = el.getAttribute('data-i18n');
                 if (i18nData[currentLang][key]) el.innerText = i18nData[currentLang][key];
             });
+            updateLoginButtonDisplay();
+            const modal = document.getElementById('user-modal');
+            if (!modal.classList.contains('hidden')) {
+                const user = getCurrentUser();
+                if (!user) renderLoginView();
+                else renderUserProfileView(user);
+            }
         }
         changeLanguage(currentLang);
 
@@ -197,7 +649,8 @@
         }
 
         function updateHomeTotalVal() {
-            let assets = JSON.parse(localStorage.getItem('user_assets')) || { usdt: 100000.00 };
+            let assetsKey = getUserStorageKey('assets');
+            let assets = JSON.parse(localStorage.getItem(assetsKey)) || { usdt: 100000.00 };
             let totalUSDT = assets.usdt || 0;
             let converted = totalUSDT * getRate(currentCurrency);
             let symbolStr = symbols[currentCurrency] || 'USDT';
@@ -340,9 +793,10 @@
             navigator.clipboard.writeText(document.getElementById('dep-addr').innerText).then(() => alert(i18nData[currentLang]['copy-success']));
         }
         function confirmDep() {
-            let assets = JSON.parse(localStorage.getItem('user_assets')) || { usdt: 100000.00 };
+            let assetsKey = getUserStorageKey('assets');
+            let assets = JSON.parse(localStorage.getItem(assetsKey)) || { usdt: 100000.00 };
             assets.usdt += 10000.00;
-            localStorage.setItem('user_assets', JSON.stringify(assets));
+            localStorage.setItem(assetsKey, JSON.stringify(assets));
             logHistory('充币 (Deposit)', '+10,000 USDT');
             updateHomeTotalVal();
             closeModal();
@@ -351,22 +805,25 @@
         function confirmWit() {
             let amt = parseFloat(document.getElementById('wit-amt').value);
             if (isNaN(amt) || amt <= 0) { alert('请输入有效金额！'); return; }
-            let assets = JSON.parse(localStorage.getItem('user_assets')) || { usdt: 100000.00 };
+            let assetsKey = getUserStorageKey('assets');
+            let assets = JSON.parse(localStorage.getItem(assetsKey)) || { usdt: 100000.00 };
             if (assets.usdt < amt) { alert('可用余额不足！'); return; }
             assets.usdt -= amt;
-            localStorage.setItem('user_assets', JSON.stringify(assets));
+            localStorage.setItem(assetsKey, JSON.stringify(assets));
             logHistory('提币 (Withdraw)', `-${amt} USDT`);
             updateHomeTotalVal();
             closeModal();
             alert(i18nData[currentLang]['alert-wit']);
         }
         function logHistory(action, detail) {
-            let logs = JSON.parse(localStorage.getItem('user_history_logs')) || [];
+            let historyKey = getUserStorageKey('history_logs');
+            let logs = JSON.parse(localStorage.getItem(historyKey)) || [];
             logs.unshift({ action, detail, time: new Date().toLocaleString() });
-            localStorage.setItem('user_history_logs', JSON.stringify(logs));
+            localStorage.setItem(historyKey, JSON.stringify(logs));
         }
 
         window.onload = function() {
+            updateLoginButtonDisplay();
             updateHomeTotalVal();
             initBinanceWebSocket();
         };
