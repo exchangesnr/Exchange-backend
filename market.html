@@ -27,13 +27,14 @@
 </head>
 <body class="bg-okxDark text-gray-200 font-sans">
 
-    <!-- 顶栏 -->
+    <!-- 顶栏：多语言、时区与法币/币种切换、用户登录入口 -->
     <header class="flex justify-between items-center p-3 bg-okxCard border-b border-gray-800 sticky top-0 z-50">
         <div class="flex items-center space-x-2">
             <span class="text-xs text-gray-400" id="live-time">00:00:00</span>
             <span id="ws-status" class="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">连接中...</span>
         </div>
         <div class="flex items-center space-x-1.5">
+            <!-- 用户登录/注册入口按钮 -->
             <button onclick="openUserCenter()" id="user-btn" class="text-[10px] bg-okxGreen/20 text-okxGreen border border-okxGreen/30 px-2 py-1 rounded font-bold truncate max-w-[100px]">
                 未登录
             </button>
@@ -52,7 +53,7 @@
         </div>
     </header>
 
-    <!-- 资产总览卡片 -->
+    <!-- 主页顶部资产总览卡片 -->
     <div class="p-3">
         <div class="bg-gradient-to-r from-okxCard to-gray-800 p-4 rounded-xl border border-gray-800 shadow-lg">
             <div class="text-xs text-gray-400" data-i18n="total-equity">账户总资产折合</div>
@@ -77,7 +78,7 @@
         <div id="coin-list" class="space-y-2"></div>
     </div>
 
-    <!-- 充提币弹窗 -->
+    <!-- 全局弹窗模块（充币/提币） -->
     <div id="action-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
         <div class="bg-okxCard w-full max-w-sm rounded-xl border border-gray-700 p-4 text-xs space-y-3 relative shadow-2xl">
             <button onclick="closeModal()" class="absolute top-3 right-3 text-gray-400 hover:text-white text-base font-bold">&times;</button>
@@ -86,7 +87,7 @@
         </div>
     </div>
 
-    <!-- 用户中心弹窗 -->
+    <!-- 用户登录/注册/KYC 中心弹窗 -->
     <div id="user-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
         <div class="bg-okxCard w-full max-w-sm rounded-xl border border-gray-700 p-4 text-xs space-y-3 relative shadow-2xl my-auto">
             <button onclick="closeUserModal()" class="absolute top-3 right-3 text-gray-400 hover:text-white text-base font-bold">&times;</button>
@@ -112,12 +113,13 @@
     </nav>
 
     <script>
+        // --- 国际化字典 ---
         const i18nData = {
             'zh-CN': {
                 'total-equity': '账户总资产折合', 'btn-deposit': '链上充币', 'btn-withdraw': '快捷提币',
                 'th-pair': '币种 / 成交额', 'th-price': '最新价 / 24h涨跌',
                 'nav-market': '行情', 'nav-trade': '交易', 'nav-assets': '资产', 'timeZone': 'Asia/Shanghai',
-                'title-deposit': 'TRC20 链上充币', 'title-withdraw': '数字资产提现',
+                'title-deposit': 'TRC20 鏈上充币', 'title-withdraw': '数字资产提现',
                 'lbl-network': '充币网络', 'lbl-amount': '数量', 'lbl-address': '充币地址',
                 'btn-copy': '复制地址', 'copy-success': '充币地址已复制！',
                 'btn-confirm-dep': '模拟链上到账 (+$10,000)', 'btn-confirm-wit': '确认提币',
@@ -290,8 +292,11 @@
 
         function openUserCenter() {
             const user = getCurrentUser();
-            if (!user) renderLoginView();
-            else renderUserProfileView(user);
+            if (!user) {
+                renderLoginView();
+            } else {
+                renderUserProfileView(user);
+            }
             document.getElementById('user-modal').classList.remove('hidden');
         }
         function closeUserModal() {
@@ -339,7 +344,7 @@
             `;
         }
 
-        // 核心修复：连接 Render 线上后端的 API 地址
+        // --- 核心修复：连接 Render 线上后端的 API 地址 ---
         async function sendVerificationCode() {
             const dict = i18nData[currentLang];
             const contactVal = document.getElementById('reg-contact').value.trim();
@@ -436,6 +441,7 @@
             }
         }
 
+        // --- 核心修复：连接 Render 线上后端的 API 地址 ---
         async function handleRegisterSubmit() {
             const dict = i18nData[currentLang];
             const username = document.getElementById('reg-username').value.trim();
@@ -457,14 +463,14 @@
             }
 
             try {
-                let response = await fetch('https://exchange-backend-46vp.onrender.com/api/verify-code', {
+                let response = await fetch('https://exchange-backend-46vp.onrender.com/api/register', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: contact, code: inputCode })
+                    body: JSON.stringify({ username, password, birthday, address, contact, code: inputCode })
                 });
                 let result = await response.json();
 
-                if (result.success || inputCode) { // 保证兼容
+                if (result.success) {
                     usersDb[username] = { password, birthday, address, contact, kyc: { status: dict['status-unverified'] } };
                     localStorage.setItem('exchange_users_db', JSON.stringify(usersDb));
 
@@ -472,11 +478,6 @@
                     let userAssetsKey = getUserStorageKey('assets');
                     if (!localStorage.getItem(userAssetsKey)) {
                         localStorage.setItem(userAssetsKey, JSON.stringify({ usdt: 100000.00 }));
-                    }
-
-                    // 同时向后端 WebSocket 发送登录通知
-                    if (exchangeWs && exchangeWs.readyState === WebSocket.OPEN) {
-                        exchangeWs.send(JSON.stringify({ type: 'USER_LOGIN', username: username }));
                     }
 
                     alert(dict['success-reg']);
@@ -488,14 +489,7 @@
                 }
             } catch (error) {
                 console.error(error);
-                // 离线/后端异常兜底本地存储
-                usersDb[username] = { password, birthday, address, contact, kyc: { status: dict['status-unverified'] } };
-                localStorage.setItem('exchange_users_db', JSON.stringify(usersDb));
-                localStorage.setItem('exchange_current_user', username);
-                alert(dict['success-reg']);
-                closeUserModal();
-                updateLoginButtonDisplay();
-                updateHomeTotalVal();
+                alert('后端连接异常，请检查服务器状态');
             }
         }
 
@@ -511,10 +505,6 @@
             }
 
             localStorage.setItem('exchange_current_user', username);
-            if (exchangeWs && exchangeWs.readyState === WebSocket.OPEN) {
-                exchangeWs.send(JSON.stringify({ type: 'USER_LOGIN', username: username }));
-            }
-
             alert(`${dict['welcome']}${username}`);
             closeUserModal();
             updateLoginButtonDisplay();
@@ -678,49 +668,19 @@
             }
         }
 
-        // --- 核心更新：连接 Render 后端 WebSocket 与币安行情双通道 ---
-        let exchangeWs = null;
-        function initExchangeWebSocket() {
-            const backendWsUrl = 'wss://exchange-backend-46vp.onrender.com';
-            try {
-                exchangeWs = new WebSocket(backendWsUrl);
-                exchangeWs.onopen = () => {
-                    console.log("已连接到 Render 交易后端");
-                    const user = getCurrentUser();
-                    if (user) {
-                        exchangeWs.send(JSON.stringify({ type: 'USER_LOGIN', username: user }));
-                    }
-                };
-                exchangeWs.onmessage = (event) => {
-                    try {
-                        const data = JSON.parse(event.data);
-                        // 接收后端管理员远程强改资金
-                        if (data.type === 'BALANCE_UPDATED') {
-                            let assetsKey = getUserStorageKey('assets');
-                            let assets = JSON.parse(localStorage.getItem(assetsKey)) || { usdt: 100000.00 };
-                            assets.usdt = data.newBalance;
-                            localStorage.setItem(assetsKey, JSON.stringify(assets));
-                            updateHomeTotalVal();
-                        }
-                    } catch(e) {}
-                };
-            } catch(e) {
-                console.error("Backend WS error:", e);
-            }
-        }
-
+        let ws;
         function initBinanceWebSocket() {
             const streams = topCoins.map(c => `${c.symbol.toLowerCase()}usdt@ticker`).join('/');
             const wsUrl = `wss://stream.binance.com:9443/ws/${streams}`;
             const wsStatusEl = document.getElementById('ws-status');
 
             try {
-                const binanceWs = new WebSocket(wsUrl);
-                binanceWs.onopen = () => {
-                    wsStatusEl.innerText = ' Binance';
+                ws = new WebSocket(wsUrl);
+                ws.onopen = () => {
+                    wsStatusEl.innerText = '🔴 Binance';
                     wsStatusEl.className = 'text-[10px] px-1.5 py-0.5 rounded bg-okxGreen/20 text-okxGreen border border-okxGreen/30';
                 };
-                binanceWs.onmessage = (event) => {
+                ws.onmessage = (event) => {
                     const data = JSON.parse(event.data);
                     if (data && data.s) {
                         const symbolStr = data.s.replace('USDT', '');
@@ -732,8 +692,8 @@
                         }
                     }
                 };
-                binanceWs.onerror = () => { fallbackToSimulated(); };
-                binanceWs.onclose = () => { fallbackToSimulated(); };
+                ws.onerror = () => { fallbackToSimulated(); };
+                ws.onclose = () => { fallbackToSimulated(); };
             } catch (e) {
                 fallbackToSimulated();
             }
@@ -744,7 +704,7 @@
             if (isSimulating) return;
             isSimulating = true;
             const wsStatusEl = document.getElementById('ws-status');
-            wsStatusEl.innerText = 'Simulated';
+            wsStatusEl.innerText = '⚡ 模拟模式';
             wsStatusEl.className = 'text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30';
 
             setInterval(() => {
@@ -798,7 +758,7 @@
         }
         function confirmDep() {
             let assetsKey = getUserStorageKey('assets');
-            let assets = JSON.parse(localStorage.getItem(assetsKey)) || { usdt: 0.00 };
+            let assets = JSON.parse(localStorage.getItem(assetsKey)) || { usdt: 100000.00 };
             assets.usdt += 10000.00;
             localStorage.setItem(assetsKey, JSON.stringify(assets));
             logHistory('充币 (Deposit)', '+10,000 USDT');
@@ -810,7 +770,7 @@
             let amt = parseFloat(document.getElementById('wit-amt').value);
             if (isNaN(amt) || amt <= 0) { alert('请输入有效金额！'); return; }
             let assetsKey = getUserStorageKey('assets');
-            let assets = JSON.parse(localStorage.getItem(assetsKey)) || { usdt: 0.00 };
+            let assets = JSON.parse(localStorage.getItem(assetsKey)) || { usdt: 100000.00 };
             if (assets.usdt < amt) { alert('可用余额不足！'); return; }
             assets.usdt -= amt;
             localStorage.setItem(assetsKey, JSON.stringify(assets));
@@ -830,7 +790,6 @@
             updateLoginButtonDisplay();
             updateHomeTotalVal();
             initBinanceWebSocket();
-            initExchangeWebSocket();
         };
         setInterval(updateHomeTotalVal, 1000);
     </script>

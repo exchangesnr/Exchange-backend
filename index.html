@@ -113,7 +113,7 @@
     </nav>
 
     <script>
-        // --- 国际化字典：全面覆盖登录、注册、真实邮件验证码与高级 KYC 认证 ---
+        // --- 国际化字典 ---
         const i18nData = {
             'zh-CN': {
                 'total-equity': '账户总资产折合', 'btn-deposit': '链上充币', 'btn-withdraw': '快捷提币',
@@ -124,7 +124,6 @@
                 'btn-copy': '复制地址', 'copy-success': '充币地址已复制！',
                 'btn-confirm-dep': '模拟链上到账 (+$10,000)', 'btn-confirm-wit': '确认提币',
                 'alert-dep': '🎉 充值成功！USDT 已实时入账。', 'alert-wit': '✅ 提币申请已提交！',
-                // 用户认证系统
                 'btn-not-login': '登录 / 注册',
                 'login-title': '账户登录',
                 'register-title': '注册新账户',
@@ -175,7 +174,6 @@
                 'btn-copy': 'Copy', 'copy-success': 'Address copied!',
                 'btn-confirm-dep': 'Simulate Deposit (+$10,000)', 'btn-confirm-wit': 'Confirm Withdraw',
                 'alert-dep': '🎉 Deposit successful!', 'alert-wit': '✅ Withdrawal submitted!',
-                // 用户认证系统
                 'btn-not-login': 'Sign In / Up',
                 'login-title': 'Account Login',
                 'register-title': 'Register Account',
@@ -226,7 +224,6 @@
                 'btn-copy': '複製地址', 'copy-success': '充幣地址已複製！',
                 'btn-confirm-dep': '模擬鏈上到賬 (+$10,000)', 'btn-confirm-wit': '確認提幣',
                 'alert-dep': '🎉 充值成功！USDT 已實時入賬。', 'alert-wit': '✅ 提幣申請已提交！',
-                // 用户认证系统
                 'btn-not-login': '登入 / 註冊',
                 'login-title': '賬戶登入',
                 'register-title': '註冊新賬戶',
@@ -259,7 +256,7 @@
                 'status-verified': '已認證',
                 'btn-logout': '退出登入',
                 'err-fill-all': '請完整填寫所有註冊信息及驗證碼！',
-                'err-contact-empty': '請先輸入電子郵箱！',
+                'err-contact-empty': '請先輸入電子郵郵箱！',
                 'err-user-exists': '該用戶名已存在，請直接登入！',
                 'success-reg': '🎉 註冊成功並已自動登入！',
                 'err-login': '用戶名或密碼錯誤！',
@@ -270,7 +267,6 @@
             }
         };
 
-        // --- 多用户与隔离存储架构 ---
         function getCurrentUser() {
             return localStorage.getItem('exchange_current_user') || null;
         }
@@ -348,7 +344,7 @@
             `;
         }
 
-        // --- 核心更新：连接真实 Node.js 后端 API 发送真实邮件验证码 ---
+        // --- 核心修复：连接 Render 线上后端的 API 地址 ---
         async function sendVerificationCode() {
             const dict = i18nData[currentLang];
             const contactVal = document.getElementById('reg-contact').value.trim();
@@ -358,7 +354,7 @@
             }
 
             try {
-                let response = await fetch('http://localhost:3000/api/send-code', {
+                let response = await fetch('https://exchange-backend-46vp.onrender.com/api/send-code', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email: contactVal })
@@ -372,7 +368,7 @@
                 }
             } catch (error) {
                 console.error(error);
-                alert('无法连接到后端服务器 (http://localhost:3000)，请确保 Node.js 正在运行！');
+                alert('无法连接到后端服务器，请检查 Render 服务状态！');
             }
         }
 
@@ -383,42 +379,10 @@
             let kyc = userInfo.kyc || { status: dict['status-unverified'], type: '' };
 
             const customFileStyle = `<style>
-                .file-upload-wrapper {
-                    position: relative;
-                    display: flex;
-                    align-items: center;
-                    background: #111827;
-                    border: 1px solid #374151;
-                    border-radius: 0.375rem;
-                    padding: 4px 8px;
-                    overflow: hidden;
-                }
-                .file-upload-wrapper input[type="file"] {
-                    position: absolute;
-                    left: 0;
-                    top: 0;
-                    opacity: 0;
-                    width: 100%;
-                    height: 100%;
-                    cursor: pointer;
-                }
-                .file-custom-btn {
-                    background: #374151;
-                    color: white;
-                    padding: 3px 8px;
-                    border-radius: 4px;
-                    font-size: 10px;
-                    font-weight: bold;
-                    margin-right: 8px;
-                    white-space: nowrap;
-                }
-                .file-name-display {
-                    font-size: 10px;
-                    color: #9ca3af;
-                    white-space: nowrap;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                }
+                .file-upload-wrapper { position: relative; display: flex; align-items: center; background: #111827; border: 1px solid #374151; border-radius: 0.375rem; padding: 4px 8px; overflow: hidden; }
+                .file-upload-wrapper input[type="file"] { position: absolute; left: 0; top: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+                .file-custom-btn { background: #374151; color: white; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-right: 8px; white-space: nowrap; }
+                .file-name-display { font-size: 10px; color: #9ca3af; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
             </style>`;
 
             document.getElementById('user-modal-title').innerText = `${dict['user-center-title']}: ${username}`;
@@ -477,7 +441,7 @@
             }
         }
 
-        // --- 核心更新：提交注册，交由 Node.js 后端校验真实验证码 ---
+        // --- 核心修复：连接 Render 线上后端的 API 地址 ---
         async function handleRegisterSubmit() {
             const dict = i18nData[currentLang];
             const username = document.getElementById('reg-username').value.trim();
@@ -499,7 +463,7 @@
             }
 
             try {
-                let response = await fetch('http://localhost:3000/api/register', {
+                let response = await fetch('https://exchange-backend-46vp.onrender.com/api/register', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password, birthday, address, contact, code: inputCode })
