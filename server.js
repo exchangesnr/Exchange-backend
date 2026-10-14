@@ -6,6 +6,11 @@ const cors = require('cors');
 const app = express();
 app.use(cors());
 
+// 根路径响应，防止在浏览器直接访问时出现 Cannot GET / 错误
+app.get('/', (req, res) => {
+    res.send('Crypto Exchange Backend is running successfully!');
+});
+
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
@@ -41,7 +46,7 @@ wss.on('connection', (ws) => {
                 // 🎯 输赢控制核心判断
                 if (u.winMode === 'WIN') isWin = true;       // 管理员设为必赢
                 else if (u.winMode === 'LOSE') isWin = false; // 管理员设为必亏
-                else isWin = Math.random() > 0.5;            // 正常概率 (50%)
+                else isWin = Math.random() > 0.5;             // 正常概率 (50%)
 
                 const rate = isWin ? (0.05 + Math.random() * 0.1) : -(0.05 + Math.random() * 0.1);
                 const profit = data.amount * rate;
@@ -105,4 +110,6 @@ function broadcastAdmin() {
     });
 }
 
-server.listen(3000, () => console.log('后台控盘服务端运行在 http://localhost:3000'));
+// 使用 Render 动态分配的端口，若本地测试则默认为 3000
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => console.log(`后台控盘服务端运行在端口 ${PORT}`));
