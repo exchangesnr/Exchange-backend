@@ -1,120 +1,191 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-    
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>交易所 - 资产与交易历史</title>
+    <title>Web3 IDEX - 多模式资产总览</title>
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
-                        okxGreen: '#00b07c',
-                        okxRed: '#f14668',
-                        okxDark: '#12181f',
-                        okxCard: '#1e2631',
+                        idexCyan: '#00f2fe',    /* 炫酷赛博青 */
+                        idexPink: '#ff007a',    /* Web3 霓虹粉点缀 */
+                        okxGreen: '#00b07c',    /* 涨绿色 */
+                        okxRed: '#f14668',      /* 跌红色 */
+                        okxDark: '#000000',   
+                        okxCard: '#000000',   
+                        okxBorder: '#121212', 
                     }
                 }
             }
         }
     </script>
     <style>
-        /* 针对 iOS 底部安全区域的通用留白补丁 */
         body {
-            padding-bottom: calc(4.5rem + env(safe-area-inset-bottom));
+            background-color: #000000 !important;
+            padding-bottom: calc(5rem + env(safe-area-inset-bottom));
         }
+        .cyber-glow {
+            box-shadow: 0 0 15px rgba(0, 242, 254, 0.25);
+            border: 1px solid rgba(0, 242, 254, 0.4);
+        }
+        ::-webkit-scrollbar { width: 3px; height: 3px; }
+        ::-webkit-scrollbar-track { background: #000000; }
+        ::-webkit-scrollbar-thumb { background: #151515; border-radius: 2px; }
     </style>
 </head>
-<body class="bg-okxDark text-gray-200 font-sans">
+<body class="bg-okxDark text-gray-200 font-sans selection:bg-idexCyan selection:text-black">
 
-    <!-- 顶栏 -->
-    <header class="flex justify-between items-center p-3 bg-okxCard border-b border-gray-800 sticky top-0 z-50">
-        <span class="text-base font-bold text-white" data-i18n="assets-title">资产总览</span>
-        <div class="flex items-center space-x-1.5">
-            <select id="currency-select" onchange="changeValCurrency(this.value)" class="bg-gray-900 border border-gray-700 text-gray-200 text-xs rounded px-1.5 py-1 focus:outline-none">
-                <option value="USDT">USDT</option>
-                <option value="USD">USD ($)</option>
-                <option value="CNY">CNY (¥)</option>
-                <option value="HKD">HKD (HK$)</option>
-                <option value="BTC">BTC (₿)</option>
-            </select>
-            <select id="lang-select" onchange="changeLanguage(this.value)" class="bg-gray-900 border border-gray-700 text-gray-200 text-xs rounded px-1.5 py-1 focus:outline-none">
-                <option value="zh-CN">简体中文</option>
-                <option value="en-US">English</option>
-                <option value="zh-HK">繁體中文</option>
-            </select>
-        </div>
+    <!-- 顶栏：钱包状态与多语言切换 -->
+    <header class="flex justify-end items-center p-3 bg-okxDark border-b border-okxBorder sticky top-0 z-50 backdrop-blur-md bg-opacity-90 space-x-1.5">
+        <button onclick="openUserCenter()" id="user-btn" class="text-[10px] bg-idexCyan/15 text-idexCyan border border-idexCyan/30 px-2.5 py-1 rounded-lg font-bold truncate max-w-[110px]">
+            连接钱包
+        </button>
+        <select id="lang-select" onchange="changeLanguage(this.value)" class="bg-black border border-[#181818] text-gray-200 text-xs rounded px-1.5 py-1 focus:outline-none focus:border-idexCyan">
+            <option value="zh-CN">简体中文</option>
+            <option value="en-US">English</option>
+            <option value="zh-HK">繁體中文</option>
+        </select>
     </header>
 
-    <!-- 资产总估值与操作按钮 -->
-    <div class="p-3">
-        <div class="bg-gradient-to-r from-okxCard to-gray-800 p-4 rounded-xl border border-gray-800 shadow-lg">
+    <!-- 资产页核心容器 -->
+    <div class="p-3 space-y-3.5">
+        <!-- 总资产统计卡片 -->
+        <div class="bg-black p-4 rounded-xl border border-idexCyan/20 cyber-glow space-y-3">
             <div class="flex justify-between items-center">
-                <div class="text-xs text-gray-400" data-i18n="total-equity">账户总资产折合</div>
-                <!-- 隐藏/显示金额的眼睛图标按钮 -->
-                <button onclick="toggleMaskBalance()" id="eye-btn" class="text-gray-400 hover:text-white focus:outline-none p-1">
-                    <svg id="eye-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                    </svg>
-                </button>
+                <span class="text-xs text-gray-400 font-mono" data-i18n="assets-total-title">账户总资产折合 (Total Assets)</span>
+                <span class="text-[10px] bg-okxGreen/20 text-okxGreen px-2 py-0.5 rounded font-bold" data-i18n="assets-audit-ok">✓ 期权验资合规</span>
             </div>
-            <div class="text-2xl font-extrabold text-white mt-1" id="total-val">--</div>
+            <div>
+                <div class="text-3xl font-extrabold text-white font-mono" id="total-asset-val">$10,000.00</div>
+                <div class="text-xs text-gray-500 font-mono mt-1" id="total-btc-val">≈ 0.1200 BTC</div>
+            </div>
+            <!-- 快捷操作按钮（文字变更为“兑换”，功能保持充币不变） -->
+            <div class="grid grid-cols-3 gap-2 pt-2 border-t border-gray-900">
+                <button onclick="openActionModal('deposit')" class="bg-idexCyan text-black font-bold py-2 rounded-lg text-xs hover:opacity-90 transition" data-i18n="btn-deposit">兑换</button>
+                <button onclick="openActionModal('withdraw')" class="bg-[#111111] text-gray-200 font-bold py-2 rounded-lg text-xs border border-gray-800 hover:bg-gray-800 transition" data-i18n="btn-withdraw">提币</button>
+                <button onclick="openActionModal('transfer')" class="bg-[#111111] text-gray-200 font-bold py-2 rounded-lg text-xs border border-gray-800 hover:bg-gray-800 transition" data-i18n="btn-transfer">划转</button>
+            </div>
+        </div>
+
+        <!-- 各模式持仓状态保持不变 -->
+        <div class="space-y-2.5">
+            <div class="text-xs font-bold text-gray-400 px-1" data-i18n="breakdown-title">各交易模式资产分布 (Mode Distribution)</div>
             
-            <div class="grid grid-cols-3 gap-2 mt-4">
-                <button onclick="openModal('deposit')" class="bg-okxGreen text-white py-2 rounded text-xs font-bold shadow flex items-center justify-center space-x-1">
-                    <span>↓</span> <span data-i18n="btn-deposit">充币</span>
-                </button>
-                <button onclick="openModal('withdraw')" class="bg-gray-700 hover:bg-gray-600 text-white py-2 rounded text-xs font-bold shadow flex items-center justify-center space-x-1">
-                    <span>↑</span> <span data-i18n="btn-withdraw">提币</span>
-                </button>
-                <button onclick="openModal('transfer')" class="bg-gray-700 hover:bg-gray-600 text-white py-2 rounded text-xs font-bold shadow flex items-center justify-center space-x-1">
-                    <span>⇄</span> <span data-i18n="btn-transfer">划转</span>
-                </button>
+            <div class="bg-[#050505] p-3 rounded-xl border border-gray-900 flex justify-between items-center font-mono text-xs">
+                <div class="flex items-center space-x-2">
+                    <span class="w-2 h-2 rounded-full bg-idexCyan"></span>
+                    <span class="font-bold text-white" data-i18n="mode-spot">现货账户 (Spot)</span>
+                </div>
+                <div class="font-extrabold text-white">$4,000.00</div>
+            </div>
+
+            <div class="bg-[#050505] p-3 rounded-xl border border-gray-900 flex justify-between items-center font-mono text-xs">
+                <div class="flex items-center space-x-2">
+                    <span class="w-2 h-2 rounded-full bg-okxGreen"></span>
+                    <span class="font-bold text-white" data-i18n="mode-futures">合约账户 (Futures)</span>
+                </div>
+                <div class="font-extrabold text-white">$3,000.00</div>
+            </div>
+
+            <div class="bg-[#050505] p-3 rounded-xl border border-gray-900 flex justify-between items-center font-mono text-xs">
+                <div class="flex items-center space-x-2">
+                    <span class="w-2 h-2 rounded-full bg-idexPink"></span>
+                    <span class="font-bold text-white" data-i18n="mode-options">期权账户 (Options)</span>
+                </div>
+                <div class="font-extrabold text-white">$1,500.00</div>
+            </div>
+
+            <div class="bg-[#050505] p-3 rounded-xl border border-gray-900 flex justify-between items-center font-mono text-xs">
+                <div class="flex items-center space-x-2">
+                    <span class="w-2 h-2 rounded-full bg-yellow-400"></span>
+                    <span class="font-bold text-white" data-i18n="mode-quant">量化机器人 (Bot)</span>
+                </div>
+                <div class="font-extrabold text-white">$1,500.00</div>
+            </div>
+        </div>
+
+        <!-- 独立模块：展示各主流代币名称、数量以及持有价值 -->
+        <div class="bg-black p-3.5 rounded-xl border border-gray-900 space-y-3">
+            <div class="flex justify-between items-center border-b border-gray-900 pb-2">
+                <span class="text-xs font-bold text-white flex items-center space-x-1.5">
+                    <svg class="w-3.5 h-3.5 text-idexCyan" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <span data-i18n="token-module-title">主流代币持仓与价值总览 (Token Holdings)</span>
+                </span>
+                <span class="text-[10px] text-gray-500 font-mono">4 Assets</span>
+            </div>
+            
+            <div class="space-y-2.5 font-mono text-xs">
+                <div class="bg-[#050505] p-3 rounded-lg border border-gray-900 flex justify-between items-center">
+                    <div>
+                        <div class="font-extrabold text-white text-sm">BTC</div>
+                        <div class="text-[10px] text-gray-500">Bitcoin</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-bold text-white">0.0520 BTC</div>
+                        <div class="text-[10px] text-okxGreen">≈ $4,334.20</div>
+                    </div>
+                </div>
+                <div class="bg-[#050505] p-3 rounded-lg border border-gray-900 flex justify-between items-center">
+                    <div>
+                        <div class="font-extrabold text-white text-sm">ETH</div>
+                        <div class="text-[10px] text-gray-500">Ethereum</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-bold text-white">0.8500 ETH</div>
+                        <div class="text-[10px] text-okxGreen">≈ $2,652.00</div>
+                    </div>
+                </div>
+                <div class="bg-[#050505] p-3 rounded-lg border border-gray-900 flex justify-between items-center">
+                    <div>
+                        <div class="font-extrabold text-white text-sm">USDT</div>
+                        <div class="text-[10px] text-gray-500">Tether USD</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-bold text-white">2,513.80 USDT</div>
+                        <div class="text-[10px] text-okxGreen">≈ $2,513.80</div>
+                    </div>
+                </div>
+                <div class="bg-[#050505] p-3 rounded-lg border border-gray-900 flex justify-between items-center">
+                    <div>
+                        <div class="font-extrabold text-white text-sm">SOL</div>
+                        <div class="text-[10px] text-gray-500">Solana</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-bold text-white">2.6500 SOL</div>
+                        <div class="text-[10px] text-okxGreen">≈ $500.00</div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- 币种持仓列表 -->
-    <div class="px-3">
-        <div class="text-xs text-gray-400 mb-2 flex justify-between px-1">
-            <span data-i18n="crypto-list">多币种资产持仓</span>
-            <span data-i18n="crypto-value">估值</span>
-        </div>
-        <div class="bg-okxCard rounded-lg border border-gray-800 divide-y divide-gray-800 text-xs" id="asset-coins-list"></div>
-    </div>
-
-    <!-- 交易历史日志面板 -->
-    <div class="px-3 pt-4">
-        <div class="text-xs text-gray-400 mb-2 px-1 font-bold" data-i18n="history-title">全局交易与流水日志</div>
-        <div class="bg-okxCard rounded-lg border border-gray-800 p-3 space-y-2 max-h-48 overflow-y-auto text-xs" id="history-logs-container">
-            <div class="text-gray-500 text-center py-2" data-i18n="history-empty">暂无操作日志记录</div>
-        </div>
-    </div>
-
-    <!-- 全局弹窗 -->
-    <div id="action-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-okxCard w-full max-w-sm rounded-xl border border-gray-700 p-4 text-xs space-y-3 relative shadow-2xl">
-            <button onclick="closeModal()" class="absolute top-3 right-3 text-gray-400 hover:text-white text-base font-bold">&times;</button>
-            <div id="modal-title" class="text-sm font-bold text-white border-b border-gray-800 pb-2"></div>
-            <div id="modal-body" class="space-y-3"></div>
+    <!-- 弹窗：链上充币功能（按钮文案显示为“兑换”） -->
+    <div id="action-modal" class="fixed inset-0 bg-black/95 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-black w-full max-w-sm rounded-xl border border-idexCyan/30 p-4 text-xs space-y-3 relative shadow-2xl cyber-glow">
+            <button onclick="closeActionModal()" class="absolute top-3 right-3 text-gray-400 hover:text-white text-base font-bold">&times;</button>
+            <div id="modal-title" class="text-sm font-bold text-idexCyan border-b border-gray-900 pb-2">操作中心</div>
+            <div id="modal-body" class="space-y-3">
+                <!-- 动态内容渲染 -->
+            </div>
         </div>
     </div>
 
     <!-- 底部导航栏 -->
-    <nav class="fixed bottom-0 left-0 right-0 h-16 bg-okxCard border-t border-gray-800 flex justify-around items-center pb-[env(safe-area-inset-bottom)] z-50">
-        <a href="./market.html" class="flex-1 h-full text-gray-400 text-xs flex flex-col items-center justify-center font-bold">
-            <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+    <nav class="fixed bottom-0 left-0 right-0 h-16 bg-[#000000] border-t border-[#121212] flex justify-around items-center pb-[env(safe-area-inset-bottom)] z-50 shadow-2xl">
+        <a href="./market.html" class="flex-1 h-full text-gray-500 text-xs flex flex-col items-center justify-center font-bold hover:text-white transition">
+            <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"></path></svg>
             <span data-i18n="nav-market">行情</span>
         </a>
-        <a href="./trade.html?symbol=BTC" class="flex-1 h-full text-gray-400 text-xs flex flex-col items-center justify-center font-bold">
-            <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+        <a href="./trade.html?symbol=BTC" class="flex-1 h-full text-gray-500 text-xs flex flex-col items-center justify-center font-bold hover:text-white transition">
+            <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"></path></svg>
             <span data-i18n="nav-trade">交易</span>
         </a>
-        <a href="./assets.html" class="flex-1 h-full text-okxGreen text-xs flex flex-col items-center justify-center font-bold">
-            <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
+        <a href="./assets.html" class="flex-1 h-full text-idexCyan text-xs flex flex-col items-center justify-center font-bold">
+            <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M9 9.563C9 9.252 9.252 9 9.563 9h4.874c.311 0 .563.252.563.563v4.874c0 .311-.252.563-.563.563H9.564A.562.562 0 019 14.437V9.564z"></path></svg>
             <span data-i18n="nav-assets">资产</span>
         </a>
     </nav>
@@ -122,330 +193,192 @@
     <script>
         const i18nData = {
             'zh-CN': {
-                'assets-title': '资产总览', 'total-equity': '账户总资产折合',
-                'btn-deposit': '充币', 'btn-withdraw': '提币', 'btn-transfer': '划转',
-                'crypto-list': '多币种资产持仓', 'crypto-value': '折合估值',
-                'history-title': '全局交易与流水日志', 'history-empty': '暂无操作日志记录',
-                'nav-market': '行情', 'nav-trade': '交易', 'nav-assets': '资产', 'timeZone': 'Asia/Shanghai',
-                'title-deposit': 'TRC20 链上充币', 'title-withdraw': '数字资产提现', 'title-transfer': '资金划转',
-                'lbl-network': '充币网络', 'lbl-amount': '数量', 'lbl-address': '充币地址',
-                'btn-copy': '复制地址', 'copy-success': '地址已复制！',
-                'btn-confirm-dep': '充值到账 (+$10,000)', 'btn-confirm-wit': '确认提币', 'btn-confirm-tra': '确认划转',
-                'alert-dep': '🎉 充值成功！', 'alert-wit': '✅ 提币申请已提交！', 'alert-tra': '⇄ 划转成功！',
-                'log-dep': '链上充币', 'log-dep-detail': '+10,000 USDT (TRC20)',
-                'log-wit': '提币提现', 'log-wit-detail': '提现 USDT',
-                'log-tra': '内部划转', 'log-tra-detail': '资金账户 ⇄ 交易账户',
-                'err-valid-amount': '请输入有效金额！', 'err-insufficient': '可用余额不足！',
-                'lbl-from': '从:', 'lbl-to': '至:', 'acc-fund': '资金账户', 'acc-trade': '交易账户'
+                'nav-market': '行情', 'nav-trade': '交易', 'nav-assets': '资产',
+                'assets-total-title': '账户总资产折合 (Total Assets)',
+                'assets-audit-ok': '✓ 期权验资合规',
+                'btn-deposit': '兑换', 'btn-withdraw': '提币', 'btn-transfer': '划转',
+                'breakdown-title': '各交易模式资产分布 (Mode Distribution)',
+                'mode-spot': '现货账户 (Spot)', 'mode-futures': '合约账户 (Futures)',
+                'mode-options': '期权账户 (Options)', 'mode-quant': '量化机器人 (Bot)',
+                'token-module-title': '主流代币持仓与价值总览 (Token Holdings)',
+                'btn-not-login': '连接钱包', 'btn-confirm': '确认执行',
+                'modal-deposit': '链上兑换充值 (Swap & Deposit)', 'modal-withdraw': '提币 (Withdraw)', 'modal-transfer': '资金划转 (Transfer)',
+                'lbl-currency': '选择币种 (Currency)', 'lbl-network': '充币网络 (Deposit Network)',
+                'lbl-address': '充币地址 (Deposit Address)', 'btn-copy': '复制地址',
+                'modal-input-placeholder': '请输入提币/划转金额',
+                'success-action': '🎉 操作成功！',
+                'copied-msg': '✓ 充币地址已成功复制到剪贴板！'
             },
             'en-US': {
-                'assets-title': 'Overview', 'total-equity': 'Total Account Equity',
-                'btn-deposit': 'Deposit', 'btn-withdraw': 'Withdraw', 'btn-transfer': 'Transfer',
-                'crypto-list': 'Crypto Holdings', 'crypto-value': 'Estimated Value',
-                'history-title': 'Transaction History & Logs', 'history-empty': 'No activity logs',
-                'nav-market': 'Market', 'nav-trade': 'Trade', 'nav-assets': 'Assets', 'timeZone': 'America/New_York',
-                'title-deposit': 'On-chain Deposit', 'title-withdraw': 'Withdrawal', 'title-transfer': 'Transfer',
-                'lbl-network': 'Network', 'lbl-amount': 'Amount', 'lbl-address': 'Address',
-                'btn-copy': 'Copy', 'copy-success': 'Address copied!',
-                'btn-confirm-dep': 'Deposit Funds (+$10,000)', 'btn-confirm-wit': 'Confirm Withdraw', 'btn-confirm-tra': 'Confirm Transfer',
-                'alert-dep': '🎉 Deposit successful!', 'alert-wit': '✅ Withdrawal submitted!', 'alert-tra': '⇄ Transfer successful!',
-                'log-dep': 'On-chain Deposit', 'log-dep-detail': '+10,000 USDT (TRC20)',
-                'log-wit': 'Withdrawal', 'log-wit-detail': 'Withdraw USDT',
-                'log-tra': 'Transfer', 'log-tra-detail': 'Funding ⇄ Trading',
-                'err-valid-amount': 'Please enter a valid amount!', 'err-insufficient': 'Insufficient balance!',
-                'lbl-from': 'From:', 'lbl-to': 'To:', 'acc-fund': 'Funding Account', 'acc-trade': 'Trading Account'
+                'nav-market': 'Market', 'nav-trade': 'Trade', 'nav-assets': 'Assets',
+                'assets-total-title': 'Total Valuation (Total Assets)',
+                'assets-audit-ok': '✓ Options Audit Passed',
+                'btn-deposit': 'Swap', 'btn-withdraw': 'Withdraw', 'btn-transfer': 'Transfer',
+                'breakdown-title': 'Mode Distribution',
+                'mode-spot': 'Spot Account', 'mode-futures': 'Futures Account',
+                'mode-options': 'Options Account', 'mode-quant': 'Quant Bot',
+                'token-module-title': 'Token Holdings & Valuation',
+                'btn-not-login': 'Connect', 'btn-confirm': 'Confirm',
+                'modal-deposit': 'Swap & Deposit', 'modal-withdraw': 'Withdraw', 'modal-transfer': 'Transfer',
+                'lbl-currency': 'Currency', 'lbl-network': 'Deposit Network',
+                'lbl-address': 'Deposit Address', 'btn-copy': 'Copy Address',
+                'modal-input-placeholder': 'Enter amount',
+                'success-action': '🎉 Operation successful!',
+                'copied-msg': '✓ Deposit address copied successfully!'
             },
             'zh-HK': {
-                'assets-title': '資產總覽', 'total-equity': '賬戶總資產折合',
-                'btn-deposit': '充幣', 'btn-withdraw': '提幣', 'btn-transfer': '劃轉',
-                'crypto-list': '多幣種資產持倉', 'crypto-value': '折合估值',
-                'history-title': '全局交易與流水日志', 'history-empty': '暫無操作日志記錄',
-                'nav-market': '行情', 'nav-trade': '交易', 'nav-assets': '資產', 'timeZone': 'Asia/Hong_Kong',
-                'title-deposit': 'TRC20 鏈上充币', 'title-withdraw': '數字資產提現', 'title-transfer': '資金劃轉',
-                'lbl-network': '充币網絡', 'lbl-amount': '數量', 'lbl-address': '充币地址',
-                'btn-copy': '複製地址', 'copy-success': '地址已複製！',
-                'btn-confirm-dep': '充值到賬 (+$10,000)', 'btn-confirm-wit': '確認提幣', 'btn-confirm-tra': '確認劃轉',
-                'alert-dep': '🎉 充值成功！', 'alert-wit': '✅ 提幣申請已提交！', 'alert-tra': '⇄ 劃轉成功！',
-                'log-dep': '鏈上充币', 'log-dep-detail': '+10,000 USDT (TRC20)',
-                'log-wit': '提幣提現', 'log-wit-detail': '提現 USDT',
-                'log-tra': '內部劃轉', 'log-tra-detail': '資金賬戶 ⇄ 交易賬戶',
-                'err-valid-amount': '請輸入有效金額！', 'err-insufficient': '可用餘額不足！',
-                'lbl-from': '從:', 'lbl-to': '至:', 'acc-fund': '資金賬戶', 'acc-trade': '交易賬戶'
+                'nav-market': '行情', 'nav-trade': '交易', 'nav-assets': '資產',
+                'assets-total-title': '賬戶總資產折合 (Total Assets)',
+                'assets-audit-ok': '✓ 期權驗資合規',
+                'btn-deposit': '兌換', 'btn-withdraw': '提幣', 'btn-transfer': '劃轉',
+                'breakdown-title': '各交易模式資產分佈 (Mode Distribution)',
+                'mode-spot': '現貨賬戶 (Spot)', 'mode-futures': '合約賬戶 (Futures)',
+                'mode-options': '期權賬戶 (Options)', 'mode-quant': '量化機器人 (Bot)',
+                'token-module-title': '主流代幣持倉與價值總覽 (Token Holdings)',
+                'btn-not-login': '連接錢包', 'btn-confirm': '確認執行',
+                'modal-deposit': '鏈上兌換充值 (Swap & Deposit)', 'modal-withdraw': '提幣 (Withdraw)', 'modal-transfer': '資金劃轉 (Transfer)',
+                'lbl-currency': '選擇幣種 (Currency)', 'lbl-network': '充幣網絡 (Deposit Network)',
+                'lbl-address': '充幣地址 (Deposit Address)', 'btn-copy': '複製地址',
+                'modal-input-placeholder': '請輸入提幣/劃轉金額',
+                'success-action': '🎉 操作成功！',
+                'copied-msg': '✓ 充币地址已成功复制！'
             }
         };
 
-        const topCoins = [
-            { symbol: 'USDT', name: 'Tether', price: 1.00, iconUrl: 'https://assets.coingecko.com/coins/images/325/large/Tether.png' },
-            { symbol: 'BTC', name: 'Bitcoin', price: 83350.00, iconUrl: 'https://assets.coingecko.com/coins/images/1/large/bitcoin.png' },
-            { symbol: 'ETH', name: 'Ethereum', price: 3120.50, iconUrl: 'https://assets.coingecko.com/coins/images/279/large/ethereum.png' },
-            { symbol: 'SOL', name: 'Solana', price: 185.20, iconUrl: 'https://assets.coingecko.com/coins/images/4128/large/solana.png' },
-            { symbol: 'XRP', name: 'XRP', price: 0.6250, iconUrl: 'https://assets.coingecko.com/coins/images/44/large/xrp-symbol-white-128.png' },
-            { symbol: 'DOGE', name: 'Dogecoin', price: 0.1680, iconUrl: 'https://assets.coingecko.com/coins/images/5/large/dogecoin.png' },
-            { symbol: 'ADA', name: 'Cardano', price: 0.4520, iconUrl: 'https://assets.coingecko.com/coins/images/975/large/cardano.png' },
-            { symbol: 'TRX', name: 'TRON', price: 0.1240, iconUrl: 'https://assets.coingecko.com/coins/images/1094/large/tron-logo.png' },
-            { symbol: 'AVAX', name: 'Avalanche', price: 32.50, iconUrl: 'https://assets.coingecko.com/coins/images/12559/large/Avalanche_Circle_RedWhite_Trans.png' },
-            { symbol: 'LINK', name: 'Chainlink', price: 14.80, iconUrl: 'https://assets.coingecko.com/coins/images/877/large/chainlink-new-logo.png' },
-            { symbol: 'SUI', name: 'Sui', price: 1.95, iconUrl: 'https://assets.coingecko.com/coins/images/26375/large/sui-ocean-square.png' },
-            { symbol: 'SHIB', name: 'Shiba Inu', price: 0.000022, iconUrl: 'https://assets.coingecko.com/coins/images/11939/large/shiba.png' },
-            { symbol: 'BCH', name: 'Bitcoin Cash', price: 380.00, iconUrl: 'https://assets.coingecko.com/coins/images/780/large/bitcoin-cash-circle.png' },
-            { symbol: 'DOT', name: 'Polkadot', price: 7.20, iconUrl: 'https://assets.coingecko.com/coins/images/12171/large/polkadot.png' },
-            { symbol: 'NEAR', name: 'NEAR Protocol', price: 5.60, iconUrl: 'https://assets.coingecko.com/coins/images/10365/large/near.png' },
-            { symbol: 'LTC', name: 'Litecoin', price: 82.40, iconUrl: 'https://assets.coingecko.com/coins/images/2/large/litecoin.png' },
-            { symbol: 'UNI', name: 'Uniswap', price: 8.90, iconUrl: 'https://assets.coingecko.com/coins/images/12504/large/uniswap-uni.png' },
-            { symbol: 'APT', name: 'Aptos', price: 9.50, iconUrl: 'https://assets.coingecko.com/coins/images/26455/large/aptos_round.png' },
-            { symbol: 'PEPE', name: 'Pepe', price: 0.000012, iconUrl: 'https://cryptologos.cc/logos/pepe-pepe-logo.png' },
-            { symbol: 'ICP', name: 'Internet Computer', price: 9.20, iconUrl: 'https://cryptologos.cc/logos/internet-computer-icp-logo.png' },
-            { symbol: 'RENDER', name: 'Render Token', price: 7.80, iconUrl: 'https://assets.coingecko.com/coins/images/11636/large/rndr.png' }
-        ];
-
         let currentLang = localStorage.getItem('exchange_lang') || 'zh-CN';
-        let currentCurrency = localStorage.getItem('exchange_currency') || 'USDT';
-        let isBalanceHidden = localStorage.getItem('exchange_balance_hidden') === 'true';
-        
         document.getElementById('lang-select').value = currentLang;
-        document.getElementById('currency-select').value = currentCurrency;
-        updateEyeIconUI();
-
-        function toggleMaskBalance() {
-            isBalanceHidden = !isBalanceHidden;
-            localStorage.setItem('exchange_balance_hidden', isBalanceHidden);
-            updateEyeIconUI();
-            loadAssets();
-        }
-
-        function updateEyeIconUI() {
-            const eyeIcon = document.getElementById('eye-icon');
-            if (isBalanceHidden) {
-                eyeIcon.innerHTML = `
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a10.05 10.05 0 012.28-3.95m3.11-2.485A9.956 9.956 0 0112 5c4.478 0 8.268 2.943 9.542 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path>
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3l18 18"></path>
-                `;
-            } else {
-                eyeIcon.innerHTML = `
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                `;
-            }
-        }
 
         function changeLanguage(lang) {
             currentLang = lang;
             localStorage.setItem('exchange_lang', lang);
+            
             document.querySelectorAll('[data-i18n]').forEach(el => {
                 const key = el.getAttribute('data-i18n');
-                if (i18nData[currentLang][key]) el.innerText = i18nData[currentLang][key];
-            });
-            renderHistoryLogs();
-        }
-
-        function changeValCurrency(curr) {
-            currentCurrency = curr;
-            localStorage.setItem('exchange_currency', curr);
-            loadAssets();
-        }
-
-        const rates = { USDT: 1.0, USD: 1.0, CNY: 7.25, HKD: 7.82, BTC: 1 / 83350.0 };
-        const symbols = { USDT: 'USDT', USD: '$', CNY: '¥', HKD: 'HK$', BTC: '₿' };
-
-        function loadAssets() {
-            let assets = JSON.parse(localStorage.getItem('user_assets')) || { usdt: 100000.00 };
-            let totalValUSDT = assets.usdt || 0;
-
-            const container = document.getElementById('asset-coins-list');
-            if (!container) return;
-            container.innerHTML = '';
-
-            topCoins.forEach(coin => {
-                let amount = coin.symbol === 'USDT' ? (assets.usdt || 0) : (assets[coin.symbol] || 0);
-                let valUSDT = amount * coin.price;
-                if (coin.symbol !== 'USDT') totalValUSDT += valUSDT;
-
-                let convertedVal = valUSDT * (rates[currentCurrency] || 1.0);
-                let sym = symbols[currentCurrency] || 'USDT';
-                let valStr = currentCurrency === 'BTC' ? convertedVal.toFixed(4) : convertedVal.toFixed(2);
-                let displayAmount = coin.symbol === 'USDT' ? amount.toFixed(2) : amount.toFixed(4);
-
-                if (isBalanceHidden) {
-                    displayAmount = '****';
-                    valStr = '****';
+                if (i18nData[currentLang] && i18nData[currentLang][key]) {
+                    el.innerText = i18nData[currentLang][key];
                 }
+            });
 
-                container.innerHTML += `
-                    <div class="p-3 flex justify-between items-center">
-                        <div class="flex items-center space-x-2.5">
-                            <img src="${coin.iconUrl}" alt="${coin.symbol}" class="w-7 h-7 rounded-full object-cover bg-gray-800 p-0.5" onerror="this.onerror=null;this.src='https://assets.coingecko.com/coins/images/325/large/Tether.png';">
-                            <div>
-                                <div class="font-bold text-white">${coin.symbol}</div>
-                                <div class="text-[10px] text-gray-400 font-medium">${coin.name}</div>
-                            </div>
+            const user = getCurrentUser();
+            const btn = document.getElementById('user-btn');
+            if (btn && !user) {
+                btn.innerText = i18nData[currentLang]['btn-not-login'];
+            }
+
+            if (!document.getElementById('action-modal').classList.contains('hidden')) {
+                refreshModalBody();
+            }
+        }
+
+        let currentActionType = 'deposit';
+        let currentNetwork = 'TRON-TRC20';
+
+        const depositAddresses = {
+            'TRON-TRC20': 'TNz1cwXMnGyjTVLkX3p6yNNHaNTqFsPLxg',
+            'Ethereum-ERC20': '0xe7a6574dd322b21da7adf7777b3e62e1e3506f06',
+            'Solana': '71QRirxNfUa7y4ZTKhvDaQMcVwtRsrvEHFX9Bstt9Dko'
+        };
+
+        function openActionModal(type) {
+            currentActionType = type;
+            const modal = document.getElementById('action-modal');
+            modal.classList.remove('hidden');
+            refreshModalBody();
+        }
+
+        function refreshModalBody() {
+            const title = document.getElementById('modal-title');
+            const body = document.getElementById('modal-body');
+            const dict = i18nData[currentLang];
+
+            if (currentActionType === 'deposit') {
+                title.innerText = dict['modal-deposit'];
+                body.innerHTML = `
+                    <div>
+                        <label class="text-gray-400 block mb-1">${dict['lbl-currency']}</label>
+                        <select class="w-full bg-[#050505] border border-gray-800 rounded p-2 text-white font-bold"><option>USDT</option></select>
+                    </div>
+                    <div>
+                        <label class="text-gray-400 block mb-1">${dict['lbl-network']}</label>
+                        <div class="grid grid-cols-3 gap-1.5 font-bold text-[11px]">
+                            <button onclick="switchDepositNetwork('TRON-TRC20')" id="net-trc20" class="p-2 rounded border ${currentNetwork==='TRON-TRC20'?'border-idexCyan bg-idexCyan/10 text-idexCyan':'border-gray-800 text-gray-400'}">TRC20</button>
+                            <button onclick="switchDepositNetwork('Ethereum-ERC20')" id="net-erc20" class="p-2 rounded border ${currentNetwork==='Ethereum-ERC20'?'border-idexCyan bg-idexCyan/10 text-idexCyan':'border-gray-800 text-gray-400'}">ERC20</button>
+                            <button onclick="switchDepositNetwork('Solana')" id="net-sol" class="p-2 rounded border ${currentNetwork==='Solana'?'border-idexCyan bg-idexCyan/10 text-idexCyan':'border-gray-800 text-gray-400'}">Solana</button>
                         </div>
-                        <div class="text-right">
-                            <div class="font-bold text-white">${displayAmount}</div>
-                            <div class="text-[10px] text-gray-500">≈ ${valStr} ${sym}</div>
+                    </div>
+                    <div>
+                        <label class="text-gray-400 block mb-1">${dict['lbl-address']} (${currentNetwork})</label>
+                        <div class="bg-[#050505] border border-gray-800 rounded p-2.5 flex justify-between items-center space-x-2">
+                            <span class="text-idexCyan font-mono text-[11px] break-all select-all" id="deposit-addr">${depositAddresses[currentNetwork]}</span>
+                            <button onclick="copyAddress()" class="bg-idexCyan/20 hover:bg-idexCyan/30 text-idexCyan px-2 py-1 rounded text-[10px] font-bold whitespace-nowrap">${dict['btn-copy']}</button>
                         </div>
                     </div>
                 `;
-            });
-
-            let finalTotalConverted = totalValUSDT * (rates[currentCurrency] || 1.0);
-            let finalSym = symbols[currentCurrency] || 'USDT';
-            let finalTotalStr = isBalanceHidden ? '********' : (currentCurrency === 'BTC' ? finalTotalConverted.toFixed(4) : finalTotalConverted.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
-            
-            document.getElementById('total-val').innerHTML = `${finalTotalStr} <span class="text-sm font-normal text-gray-400">${isBalanceHidden ? '' : finalSym}</span>`;
-
-            renderHistoryLogs();
+            } else {
+                title.innerText = currentActionType === 'withdraw' ? dict['modal-withdraw'] : dict['modal-transfer'];
+                body.innerHTML = `
+                    <input type="number" id="modal-amount" placeholder="${dict['modal-input-placeholder']}" class="w-full bg-[#050505] border border-gray-800 rounded p-2 text-white font-mono focus:border-idexCyan focus:outline-none">
+                    <button onclick="confirmAction()" class="w-full bg-idexCyan text-black font-extrabold py-2.5 rounded-lg text-xs cyber-glow">${dict['btn-confirm']}</button>
+                `;
+            }
         }
 
-        function renderHistoryLogs() {
-            let logs = JSON.parse(localStorage.getItem('user_history_logs')) || [];
-            const container = document.getElementById('history-logs-container');
-            if (!container) return;
+        function switchDepositNetwork(net) {
+            currentNetwork = net;
+            refreshModalBody();
+        }
 
-            if (logs.length === 0) {
-                container.innerHTML = `<div class="text-gray-500 text-center py-2">${i18nData[currentLang]['history-empty']}</div>`;
+        function copyAddress() {
+            const addr = depositAddresses[currentNetwork];
+            navigator.clipboard.writeText(addr).then(() => {
+                alert(i18nData[currentLang]['copied-msg']);
+            });
+        }
+
+        function closeActionModal() {
+            document.getElementById('action-modal').classList.add('hidden');
+        }
+
+        function confirmAction() {
+            const dict = i18nData[currentLang];
+            const amtElem = document.getElementById('modal-amount');
+            if (amtElem && (!amtElem.value || parseFloat(amtElem.value) <= 0)) {
+                alert('请输入有效金额！');
                 return;
             }
-
-            container.innerHTML = '';
-            logs.forEach(log => {
-                const actionText = log.actionKey && i18nData[currentLang][log.actionKey] ? i18nData[currentLang][log.actionKey] : log.action;
-                const detailText = log.detailKey && i18nData[currentLang][log.detailKey] ? (log.detailVal ? `${i18nData[currentLang][log.detailKey]} ${log.detailVal}` : i18nData[currentLang][log.detailKey]) : log.detail;
-
-                container.innerHTML += `
-                    <div class="bg-gray-900 p-2 rounded border border-gray-800 flex justify-between items-center">
-                        <div>
-                            <div class="font-bold text-white">${actionText}</div>
-                            <div class="text-[10px] text-gray-400 mt-0.5">${detailText}</div>
-                        </div>
-                        <div class="text-[10px] text-gray-500">${log.time}</div>
-                    </div>
-                `;
-            });
+            alert(dict['success-action']);
+            closeActionModal();
         }
 
-        function openModal(type) {
-            const modal = document.getElementById('action-modal');
-            const titleEl = document.getElementById('modal-title');
-            const bodyEl = document.getElementById('modal-body');
+        function getCurrentUser() { return localStorage.getItem('exchange_current_user') || null; }
+        function updateLoginButtonDisplay() {
+            const user = getCurrentUser();
+            const btn = document.getElementById('user-btn');
             const dict = i18nData[currentLang];
-            modal.classList.remove('hidden');
-
-            if (type === 'deposit') {
-                titleEl.innerText = dict['title-deposit'];
-                const trc20Addr = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";
-                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${trc20Addr}`;
-                bodyEl.innerHTML = `
-                    <div><label class="text-gray-400 block mb-1">${dict['lbl-network']}</label>
-                    <div class="bg-gray-900 border border-okxGreen text-okxGreen font-bold rounded p-1.5 text-center">TRON (TRC20)</div></div>
-                    <div class="flex flex-col items-center justify-center py-2 bg-gray-900/50 rounded border border-gray-800">
-                        <img src="${qrUrl}" class="w-28 h-28 bg-white p-1 rounded mb-2">
-                        <span class="text-[10px] text-gray-400 text-center px-2 break-all" id="dep-addr">${trc20Addr}</span>
-                    </div>
-                    <button onclick="copyAddr()" class="w-full bg-gray-700 text-white py-1.5 rounded font-bold">${dict['btn-copy']}</button>
-                    <button onclick="confirmDep()" class="w-full bg-okxGreen text-white py-2 rounded font-bold mt-1">${dict['btn-confirm-dep']}</button>
-                `;
-            } else if (type === 'withdraw') {
-                titleEl.innerText = dict['title-withdraw'];
-                bodyEl.innerHTML = `
-                    <div><label class="text-gray-400 block mb-1">${dict['lbl-address']}</label>
-                    <input type="text" placeholder="T..." class="w-full bg-gray-900 border border-gray-700 rounded p-1.5 text-white"></div>
-                    <div><label class="text-gray-400 block mb-1">${dict['lbl-amount']} (USDT)</label>
-                    <input type="text" id="wit-amt" placeholder="1000" class="w-full bg-gray-900 border border-gray-700 rounded p-1.5 text-white"></div>
-                    <button onclick="confirmWit()" class="w-full bg-red-600 text-white py-2 rounded font-bold mt-2">${dict['btn-confirm-wit']}</button>
-                `;
-            } else if (type === 'transfer') {
-                titleEl.innerText = dict['title-transfer'];
-                bodyEl.innerHTML = `
-                    <div class="flex items-center space-x-2 bg-gray-900 p-2 rounded border border-gray-800"><span class="text-gray-400">${dict['lbl-from']}</span><span class="text-white font-bold">${dict['acc-fund']}</span></div>
-                    <div class="text-center text-gray-500">↓</div>
-                    <div class="flex items-center space-x-2 bg-gray-900 p-2 rounded border border-gray-800"><span class="text-gray-400">${dict['lbl-to']}</span><span class="text-white font-bold">${dict['acc-trade']}</span></div>
-                    <div><label class="text-gray-400 block mb-1">${dict['lbl-amount']} (USDT)</label>
-                    <input type="text" id="tra-amt" placeholder="500" class="w-full bg-gray-900 border border-gray-700 rounded p-1.5 text-white"></div>
-                    <button onclick="confirmTra()" class="w-full bg-blue-600 text-white py-2 rounded font-bold mt-2">${dict['btn-confirm-tra']}</button>
-                `;
+            if(btn) {
+                if(user) {
+                    btn.innerText = user;
+                    btn.className = "text-[10px] bg-idexCyan/20 text-idexCyan border border-idexCyan/40 px-2.5 py-1 rounded-lg font-bold truncate max-w-[110px]";
+                } else {
+                    btn.innerText = dict['btn-not-login'];
+                    btn.className = "text-[10px] bg-idexCyan/15 text-idexCyan border border-idexCyan/30 px-2.5 py-1 rounded-lg font-bold truncate max-w-[110px]";
+                }
             }
         }
-        function closeModal() { document.getElementById('action-modal').classList.add('hidden'); }
-        function copyAddr() {
-            navigator.clipboard.writeText(document.getElementById('dep-addr').innerText).then(() => alert(i18nData[currentLang]['copy-success']));
-        }
-        function confirmDep() {
-            let assets = JSON.parse(localStorage.getItem('user_assets')) || { usdt: 100000.00 };
-            assets.usdt += 10000.00;
-            localStorage.setItem('user_assets', JSON.stringify(assets));
-            logHistory('log-dep', 'log-dep-detail');
-            loadAssets();
-            closeModal();
-            alert(i18nData[currentLang]['alert-dep']);
-        }
-        function confirmWit() {
-            let amt = parseFloat(document.getElementById('wit-amt').value);
-            if (isNaN(amt) || amt <= 0) { alert(i18nData[currentLang]['err-valid-amount']); return; }
-            let assets = JSON.parse(localStorage.getItem('user_assets')) || { usdt: 100000.00 };
-            if (assets.usdt < amt) { alert(i18nData[currentLang]['err-insufficient']); return; }
-            assets.usdt -= amt;
-            localStorage.setItem('user_assets', JSON.stringify(assets));
-            logHistory('log-wit', 'log-wit-detail', `-${amt} USDT`);
-            loadAssets();
-            closeModal();
-            alert(i18nData[currentLang]['alert-wit']);
-        }
-        function confirmTra() {
-            let amt = parseFloat(document.getElementById('tra-amt').value);
-            if (isNaN(amt) || amt <= 0) { alert(i18nData[currentLang]['err-valid-amount']); return; }
-            logHistory('log-tra', 'log-tra-detail', `${amt} USDT`);
-            loadAssets();
-            closeModal();
-            alert(i18nData[currentLang]['alert-tra']);
-        }
-        function logHistory(actionKey, detailKey, detailVal = '') {
-            let logs = JSON.parse(localStorage.getItem('user_history_logs')) || [];
-            logs.unshift({ 
-                actionKey, 
-                detailKey, 
-                detailVal, 
-                action: i18nData[currentLang][actionKey] || actionKey, 
-                detail: detailVal ? `${i18nData[currentLang][detailKey] || detailKey} ${detailVal}` : (i18nData[currentLang][detailKey] || detailKey),
-                time: new Date().toLocaleString() 
-            });
-            localStorage.setItem('user_history_logs', JSON.stringify(logs));
+
+        function openUserCenter() {
+            const user = getCurrentUser();
+            if(!user) {
+                window.location.href = './market.html';
+            } else {
+                alert(`Wallet Connected: ${user}`);
+            }
         }
 
-        window.onload = function() { 
+        window.onload = function() {
             changeLanguage(currentLang);
-            loadAssets(); 
+            updateLoginButtonDisplay();
         };
-        setInterval(loadAssets, 1000);
-    </script>
-
-    <!-- 🔽 自动后台风控控盘通信脚本 🔽 -->
-    <script>
-    (function() {
-        let backendWS = null;
-        let currentLoginedUser = sessionStorage.getItem('exchange_user_id') || null;
-
-        function initBackendControl() {
-            backendWS = new WebSocket('ws://localhost:3000');
-
-            backendWS.onopen = () => {
-                if (currentLoginedUser) {
-                    backendWS.send(JSON.stringify({ type: 'USER_LOGIN', username: currentLoginedUser }));
-                }
-            };
-
-            backendWS.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                if (data.type === 'BALANCE_UPDATED') {
-                    let assets = JSON.parse(localStorage.getItem('user_assets')) || { usdt: 100000.00 };
-                    assets.usdt = data.newBalance;
-                    localStorage.setItem('user_assets', JSON.stringify(assets));
-                    if (typeof loadAssets === 'function') loadAssets();
-                }
-            };
-        }
-
-        window.addEventListener('load', initBackendControl);
-    })();
     </script>
 </body>
 </html>
