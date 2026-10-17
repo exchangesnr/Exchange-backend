@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web3 IDEX - 运营管理与风控中心</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        idexCyan: '#00f2fe',
+                        okxGreen: '#00b07c',
+                        okxRed: '#f14668',
+                        okxDark: '#000000',
+                        okxBorder: '#121212',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-okxDark text-gray-200 font-sans min-h-screen pb-10">
+
+    <!-- 1. 全屏管理员登录遮罩 -->
+    <div id="admin-login-modal" class="fixed inset-0 bg-black z-50 flex items-center justify-center p-4">
+        <div class="bg-black w-full max-w-sm rounded-xl border border-idexCyan/40 p-6 space-y-4 shadow-2xl">
+            <div class="text-center space-y-1">
+                <span class="text-idexCyan font-black text-sm tracking-wider">⚡ IDEX ADMIN LOGIN</span>
+                <p class="text-[11px] text-gray-500 font-mono">请输入管理员安全凭证进入系统</p>
+            </div>
+            <div class="space-y-3 pt-2">
+                <div>
+                    <label class="text-gray-400 block mb-1 text-xs">管理员账号</label>
+                    <input type="text" id="admin-user" placeholder="admin" class="w-full bg-[#050505] border border-okxBorder rounded p-2 text-xs text-white focus:outline-none focus:border-idexCyan">
+                </div>
+                <div>
+                    <label class="text-gray-400 block mb-1 text-xs">安全密码</label>
+                    <input type="password" id="admin-pass" placeholder="idex2026admin" class="w-full bg-[#050505] border border-okxBorder rounded p-2 text-xs text-white focus:outline-none focus:border-idexCyan">
+                </div>
+                <button onclick="handleAdminLogin()" class="w-full bg-idexCyan text-black font-extrabold py-2.5 rounded text-xs hover:opacity-90 transition mt-2">安全登录后台</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. 管理员主控制面板 -->
+    <div id="admin-dashboard" class="hidden">
+        <header class="flex justify-between items-center px-6 py-4 bg-black border-b border-okxBorder sticky top-0 z-40">
+            <div class="flex items-center space-x-3">
+                <span class="text-idexCyan font-black text-base tracking-wider">⚡ IDEX ADMIN CONTROL</span>
+                <span class="text-xs text-gray-500 font-mono">| 风控、充提与客服协同后台</span>
+            </div>
+            <div class="flex items-center space-x-4 text-xs font-mono">
+                <span class="text-okxGreen">● 系统运行正常</span>
+                <button onclick="logoutAdmin()" class="bg-red-600/20 text-red-400 border border-red-500/30 px-3 py-1 rounded">退出登录</button>
+            </div>
+        </header>
+
+        <div class="max-w-7xl mx-auto p-6 space-y-6">
+            
+            <!-- 模块导航标签 -->
+            <div class="flex space-x-4 border-b border-okxBorder pb-3 text-sm font-bold">
+                <button onclick="switchAdminTab('users')" id="btn-tab-users" class="text-idexCyan border-b-2 border-idexCyan pb-1">用户仓位风控</button>
+                <button onclick="switchAdminTab('finance')" id="btn-tab-finance" class="text-gray-400 pb-1 hover:text-white">充提币审核</button>
+                <button onclick="switchAdminTab('chat')" id="btn-tab-chat" class="text-gray-400 pb-1 hover:text-white">客服实时聊天</button>
+                <button onclick="switchAdminTab('logs')" id="btn-tab-logs" class="text-gray-400 pb-1 hover:text-white">操作审计日志</button>
+            </div>
+
+            <!-- 模块 1：用户仓位与盈亏强控面板 -->
+            <div id="panel-users" class="space-y-4">
+                <h2 class="text-sm font-bold text-white">用户列表与盈亏模式强控（实时生效）</h2>
+                <div class="bg-black border border-okxBorder rounded-xl overflow-hidden">
+                    <table class="w-full text-left text-xs font-mono">
+                        <thead class="bg-[#080808] text-gray-400 border-b border-okxBorder">
+                            <tr>
+                                <th class="p-3">用户名 / 注册邮箱</th>
+                                <th class="p-3">当前资产估值</th>
+                                <th class="p-3">仓位盈亏控制模式</th>
+                                <th class="p-3 text-right">操作管理</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-user-list">
+                            <!-- 动态渲染 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 模块 2：充币与提币审核面板 -->
+            <div id="panel-finance" class="space-y-4 hidden">
+                <h2 class="text-sm font-bold text-white">用户充币与提币申请审批</h2>
+                <div class="bg-black border border-okxBorder rounded-xl overflow-hidden">
+                    <table class="w-full text-left text-xs font-mono">
+                        <thead class="bg-[#080808] text-gray-400 border-b border-okxBorder">
+                            <tr>
+                                <th class="p-3">申请单号</th>
+                                <th class="p-3">用户</th>
+                                <th class="p-3">类型</th>
+                                <th class="p-3">金额/币种</th>
+                                <th class="p-3">当前状态</th>
+                                <th class="p-3 text-right">审核操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-finance-list">
+                            <tr class="border-b border-gray-900">
+                                <td class="p-3 text-gray-400">#TX98231</td>
+                                <td class="p-3 text-white font-bold">demo_user</td>
+                                <td class="p-3 text-okxGreen">充币 (USDT)</td>
+                                <td class="p-3 text-white">5,000.00</td>
+                                <td class="p-3 text-amber-400">待审核</td>
+                                <td class="p-3 text-right space-x-2">
+                                    <button onclick="alert('已批准该笔充币')" class="bg-okxGreen/20 text-okxGreen px-2 py-1 rounded">通过</button>
+                                    <button onclick="alert('已驳回')" class="bg-red-500/20 text-red-400 px-2 py-1 rounded">拒绝</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 模块 3：客服实时聊天工作台 -->
+            <div id="panel-chat" class="space-y-4 hidden">
+                <h2 class="text-sm font-bold text-white">多用户会话隔离与实时客服协同工作台</h2>
+                <div class="grid grid-cols-3 gap-4 h-[500px]">
+                    <!-- 会话用户列表 -->
+                    <div class="bg-black border border-okxBorder rounded-xl p-3 overflow-y-auto space-y-2" id="chat-session-list">
+                        <div class="text-xs font-bold text-gray-500 mb-2">在线咨询用户</div>
+                        <div onclick="selectChatUser('demo_user')" class="p-2.5 rounded bg-gray-900/60 border border-idexCyan/30 cursor-pointer text-white font-bold flex justify-between items-center">
+                            <span>demo_user</span>
+                            <span class="w-2 h-2 rounded-full bg-idexCyan"></span>
+                        </div>
+                    </div>
+                    <!-- 聊天互动区 -->
+                    <div class="col-span-2 bg-black border border-okxBorder rounded-xl flex flex-col justify-between p-4">
+                        <div id="chat-box-header" class="text-xs font-bold text-idexCyan border-b border-okxBorder pb-2">正在与 [ demo_user ] 沟通</div>
+                        <div id="chat-messages" class="flex-1 overflow-y-auto space-y-3 py-3 text-xs font-mono">
+                            <div class="text-gray-500 text-center">选择左侧用户查看聊天记录并实时回复</div>
+                        </div>
+                        <div class="flex space-x-2 pt-2 border-t border-okxBorder">
+                            <input type="text" id="admin-reply-input" placeholder="输入回复内容..." class="flex-1 bg-[#050505] border border-okxBorder rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-idexCyan">
+                            <button onclick="sendAdminMessage()" class="bg-idexCyan text-black font-extrabold px-4 py-2 rounded text-xs">发送回复</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 模块 4：操作审计日志 -->
+            <div id="panel-logs" class="space-y-4 hidden">
+                <h2 class="text-sm font-bold text-white">用户实时操作审计流 (Action Stream)</h2>
+                <div class="bg-black border border-okxBorder rounded-xl p-4 font-mono text-xs space-y-2 max-h-[500px] overflow-y-auto" id="admin-logs-box">
+                    <div class="text-gray-500">[12:15:02] 用户 demo_user 在交易页开启 BTC 多仓 (10x)</div>
+                    <div class="text-gray-500">[12:10:45] 用户 demo_user 提交充币申请 USDT 5,000</div>
+                    <div class="text-gray-500">[12:00:11] 用户 demo_user 登录系统</div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // 登录态检查与控制
+        window.onload = function() {
+            const isLogged = localStorage.getItem('idex_admin_logged');
+            if (isLogged === 'true') {
+                document.getElementById('admin-login-modal').classList.add('hidden');
+                document.getElementById('admin-dashboard').classList.remove('hidden');
+                loadAdminData();
+            }
+        };
+
+        function handleAdminLogin() {
+            const user = document.getElementById('admin-user').value.trim();
+            const pass = document.getElementById('admin-pass').value.trim();
+            if (user === 'admin' && pass === 'idex2026admin') {
+                localStorage.setItem('idex_admin_logged', 'true');
+                document.getElementById('admin-login-modal').classList.add('hidden');
+                document.getElementById('admin-dashboard').classList.remove('hidden');
+                loadAdminData();
+            } else {
+                alert('❌ 管理员账号或密码错误！');
+            }
+        }
+
+        function logoutAdmin() {
+            localStorage.removeItem('idex_admin_logged');
+            location.reload();
+        }
+
+        // 标签切换
+        function switchAdminTab(tab) {
+            ['users', 'finance', 'chat', 'logs'].forEach(t => {
+                document.getElementById(`panel-${t}`).classList.add('hidden');
+                document.getElementById(`btn-tab-${t}`).className = "text-gray-400 pb-1 hover:text-white";
+            });
+            document.getElementById(`panel-${tab}`).classList.remove('hidden');
+            document.getElementById(`btn-tab-${tab}`).className = "text-idexCyan border-b-2 border-idexCyan pb-1 font-bold";
+        }
+
+        function loadAdminData() {
+            let usersDb = JSON.parse(localStorage.getItem('exchange_users_db')) || {
+                "demo_user": { contact: "demo@idex.com", kyc: { status: "未认证" } }
+            };
+            let riskControls = JSON.parse(localStorage.getItem('admin_risk_controls')) || {};
+            let userHtml = '';
+
+            for(let username in usersDb) {
+                let currentMode = riskControls[username] || 'random';
+                let userInfo = usersDb[username];
+                userHtml += `
+                    <tr class="border-b border-gray-900">
+                        <td class="p-3 text-white font-bold">${username} <span class="text-gray-500 font-normal block text-[10px]">${userInfo.contact || ''}</span></td>
+                        <td class="p-3 text-idexCyan">$12,450.00</td>
+                        <td class="p-3">
+                            <select onchange="setControlMode('${username}', this.value)" class="bg-[#050505] border border-gray-800 text-xs text-white rounded p-1.5 focus:border-idexCyan focus:outline-none">
+                                <option value="random" ${currentMode==='random'?'selected':''}>自然随机浮动 (随机盈亏)</option>
+                                <option value="win" ${currentMode==='win'?'selected':''}>🟢 强制盈利 (每笔交易必赢)</option>
+                                <option value="loss" ${currentMode==='loss'?'selected':''}>🔴 强制亏损 (每笔交易联动亏损)</option>
+                            </select>
+                        </td>
+                        <td class="p-3 text-right">
+                            <button onclick="alert('用户详情：KYC状态 - ${userInfo.kyc ? userInfo.kyc.status : "未认证"}')" class="text-idexCyan underline">查看详情</button>
+                        </td>
+                    </tr>
+                `;
+            }
+            document.getElementById('admin-user-list').innerHTML = userHtml;
+        }
+
+        function setControlMode(username, mode) {
+            let riskControls = JSON.parse(localStorage.getItem('admin_risk_controls')) || {};
+            riskControls[username] = mode;
+            localStorage.setItem('admin_risk_controls', JSON.stringify(riskControls));
+            alert(`✅ 已成功将用户 [${username}] 的风控模式设为: ${mode === 'win' ? '强制盈利' : mode === 'loss' ? '强制亏损' : '自然随机'}`);
+        }
+
+        // 核心升级：管理员打开用户聊天框时，自动给用户端发送 “08657号客户为你服务” 状态
+        let activeChatUser = 'demo_user';
+        function selectChatUser(username) {
+            activeChatUser = username;
+            document.getElementById('chat-box-header').innerText = `正在与 [ ${username} ] 沟通`;
+            
+            // 在聊天框渲染历史
+            document.getElementById('chat-messages').innerHTML = `
+                <div class="text-left"><span class="bg-gray-800 text-gray-200 px-2 py-1 rounded inline-block">用户 ${username}: 请问充值多久到账？</span></div>
+                <div class="text-center my-2"><span class="text-[10px] text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded">系统提示: 08657号客服已为你服务</span></div>
+            `;
+
+            // 如果接入了 WebSocket，可在此处向该用户发送上线接入通知
+            // 触发自动推送服务状态给该用户
+            let chatLogs = JSON.parse(localStorage.getItem(`chat_logs_${username}`)) || [];
+            let serviceNotice = { sender: 'system', message: '08657号客服为你服务', time: new Date().toLocaleTimeString() };
+            // 避免重复推送
+            if(!chatLogs.some(m => m.message.includes('08657号客服'))) {
+                chatLogs.push(serviceNotice);
+                localStorage.setItem(`chat_logs_${username}`, JSON.stringify(chatLogs));
+            }
+        }
+
+        // 核心升级：管理员回复时前缀为“人工客服”
+        function sendAdminMessage() {
+            const input = document.getElementById('admin-reply-input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            const box = document.getElementById('chat-messages');
+            // 前缀强制显示为“人工客服”
+            box.innerHTML += `<div class="text-right"><span class="bg-idexCyan/20 text-idexCyan border border-idexCyan/30 px-2 py-1 rounded inline-block">人工客服: ${text}</span></div>`;
+            box.scrollTop = box.scrollHeight;
+
+            // 同时存储到本地会话供用户端读取
+            let chatLogs = JSON.parse(localStorage.getItem(`chat_logs_${activeChatUser}`)) || [];
+            chatLogs.push({ sender: '人工客服', message: text, time: new Date().toLocaleTimeString() });
+            localStorage.setItem(`chat_logs_${activeChatUser}`, JSON.stringify(chatLogs));
+
+            input.value = '';
+        }
+    </script>
+</body>
+</html>
