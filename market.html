@@ -187,6 +187,9 @@
     </nav>
 
     <script>
+        // 云端生产环境 API 基础根地址
+        const API_BASE_URL = 'https://idex-backend-77jw.onrender.com';
+
         const i18nData = {
             'zh-CN': {
                 'market-header': '市场行情', 'search-placeholder': '搜索币种...',
@@ -247,7 +250,6 @@
             }
         };
 
-        // 已在主页隐藏 PEPE，ICP 恢复为您上一次使用的更新链接
         const topCoins = [
             { symbol: 'BTC', name: 'Bitcoin', price: 83350.00, change: 2.45, vol: '3.82B', iconUrl: 'https://assets.coingecko.com/coins/images/1/large/bitcoin.png' },
             { symbol: 'ETH', name: 'Ethereum', price: 3120.50, change: -0.82, vol: '1.95B', iconUrl: 'https://assets.coingecko.com/coins/images/279/large/ethereum.png' },
@@ -355,7 +357,7 @@
             const contactVal = document.getElementById('reg-contact').value.trim();
             if (!contactVal) { alert('请输入电子邮箱'); return; }
             try {
-                let response = await fetch('https://exchange-backend-46vp.onrender.com/api/send-code', {
+                let response = await fetch(`${API_BASE_URL}/api/send-code`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email: contactVal })
@@ -413,7 +415,7 @@
             if (usersDb[username]) { alert('用户已存在'); return; }
 
             try {
-                let response = await fetch('https://exchange-backend-46vp.onrender.com/api/register', {
+                let response = await fetch(`${API_BASE_URL}/api/register`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password, birthday, address, contact, code: inputCode })

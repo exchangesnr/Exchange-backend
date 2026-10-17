@@ -174,6 +174,35 @@
         </div>
     </div>
 
+    <!-- 客服悬浮入口按钮 -->
+    <button onclick="toggleSupportChat()" class="fixed right-4 bottom-20 bg-idexCyan text-black p-3 rounded-full shadow-2xl z-40 cyber-glow flex items-center justify-center hover:scale-105 transition">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+        <span class="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-ping"></span>
+    </button>
+
+    <!-- 客服聊天实时弹窗 -->
+    <div id="support-chat-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 hidden flex flex-col justify-end sm:justify-center sm:items-center p-0 sm:p-4">
+        <div class="bg-black w-full sm:max-w-md h-[80vh] sm:h-[500px] rounded-t-2xl sm:rounded-2xl border border-idexCyan/30 flex flex-col shadow-2xl cyber-glow overflow-hidden">
+            <!-- 聊天头部 -->
+            <div class="bg-[#080808] p-3.5 border-b border-gray-900 flex justify-between items-center">
+                <div class="flex items-center space-x-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse"></span>
+                    <span class="text-sm font-bold text-white" data-i18n="chat-title">Web3 IDEX 24h 官方客服</span>
+                </div>
+                <button onclick="toggleSupportChat()" class="text-gray-400 hover:text-white text-lg font-bold">&times;</button>
+            </div>
+            <!-- 聊天消息展示区 -->
+            <div id="chat-messages" class="flex-1 p-3 overflow-y-auto space-y-3 font-mono text-xs">
+                <!-- 动态填充对应语种的欢迎语 -->
+            </div>
+            <!-- 聊天输入框 -->
+            <div class="p-3 bg-[#050505] border-t border-gray-900 flex space-x-2">
+                <input type="text" id="chat-input" data-i18n-placeholder="chat-placeholder" placeholder="请输入您想咨询的问题..." class="flex-1 bg-black border border-gray-800 rounded-lg p-2.5 text-white text-xs focus:outline-none focus:border-idexCyan">
+                <button onclick="sendSupportMessage()" class="bg-idexCyan text-black font-extrabold px-4 py-2.5 rounded-lg text-xs hover:opacity-90 transition" data-i18n="chat-send">发送</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 底部导航栏 -->
     <nav class="fixed bottom-0 left-0 right-0 h-16 bg-[#000000] border-t border-[#121212] flex justify-around items-center pb-[env(safe-area-inset-bottom)] z-50 shadow-2xl">
         <a href="./market.html" class="flex-1 h-full text-gray-500 text-xs flex flex-col items-center justify-center font-bold hover:text-white transition">
@@ -191,6 +220,9 @@
     </nav>
 
     <script>
+        // 生产环境 API 基础根地址
+        const API_BASE_URL = 'https://idex-backend-77jw.onrender.com';
+
         const i18nData = {
             'zh-CN': {
                 'nav-market': '行情', 'nav-trade': '交易', 'nav-assets': '资产',
@@ -207,7 +239,15 @@
                 'lbl-address': '充币地址 (Deposit Address)', 'btn-copy': '复制地址',
                 'modal-input-placeholder': '请输入提币/划转金额',
                 'success-action': '🎉 操作成功！',
-                'copied-msg': '✓ 充币地址已成功复制到剪贴板！'
+                'copied-msg': '✓ 充币地址已成功复制到剪贴板！',
+                // 客服专员多语言国际化字段
+                'chat-title': 'Web3 IDEX 24h 官方客服',
+                'chat-placeholder': '请输入您想咨询的问题...',
+                'chat-send': '发送',
+                'chat-welcome': '👋 您好！我是 Web3 IDEX 去中心化交易所客服专员。请问您的充提币或资产划转有什么需要帮助的吗？',
+                'chat-conn': '已安全连接至 Web3 IDEX 客服系统',
+                'chat-offline': '⚠️ 客服通道处于离线仿真模式',
+                'chat-auto-reply': '收到您的咨询！我们的在线合规与财务专员正在为您处理，请稍候...'
             },
             'en-US': {
                 'nav-market': 'Market', 'nav-trade': 'Trade', 'nav-assets': 'Assets',
@@ -224,7 +264,15 @@
                 'lbl-address': 'Deposit Address', 'btn-copy': 'Copy Address',
                 'modal-input-placeholder': 'Enter amount',
                 'success-action': '🎉 Operation successful!',
-                'copied-msg': '✓ Deposit address copied successfully!'
+                'copied-msg': '✓ Deposit address copied successfully!',
+                // 客服专员多语言国际化字段
+                'chat-title': 'Web3 IDEX 24h Official Support',
+                'chat-placeholder': 'Type your question here...',
+                'chat-send': 'Send',
+                'chat-welcome': '👋 Hello! I am the Web3 IDEX Support Specialist. How can I assist you with your deposits, withdrawals, or asset transfers today?',
+                'chat-conn': 'Successfully connected to Web3 IDEX Support System',
+                'chat-offline': '⚠️ Support channel is in offline simulation mode',
+                'chat-auto-reply': 'Message received! Our online compliance and finance specialist is processing your request, please hold...'
             },
             'zh-HK': {
                 'nav-market': '行情', 'nav-trade': '交易', 'nav-assets': '資產',
@@ -234,14 +282,22 @@
                 'breakdown-title': '各交易模式資產分佈 (Mode Distribution)',
                 'mode-spot': '現貨賬戶 (Spot)', 'mode-futures': '合約賬戶 (Futures)',
                 'mode-options': '期權賬戶 (Options)', 'mode-quant': '量化機器人 (Bot)',
-                'token-module-title': '主流代幣持倉與價值總覽 (Token Holdings)',
+                'token-module-title': '主流代币持仓与价值总览 (Token Holdings)',
                 'btn-not-login': '連接錢包', 'btn-confirm': '確認執行',
                 'modal-deposit': '鏈上兌換充值 (Swap & Deposit)', 'modal-withdraw': '提幣 (Withdraw)', 'modal-transfer': '資金劃轉 (Transfer)',
-                'lbl-currency': '選擇幣種 (Currency)', 'lbl-network': '充幣網絡 (Deposit Network)',
-                'lbl-address': '充幣地址 (Deposit Address)', 'btn-copy': '複製地址',
+                'lbl-currency': '選擇幣種 (Currency)', 'lbl-network': '充币網絡 (Deposit Network)',
+                'lbl-address': '充币地址 (Deposit Address)', 'btn-copy': '複製地址',
                 'modal-input-placeholder': '請輸入提幣/劃轉金額',
                 'success-action': '🎉 操作成功！',
-                'copied-msg': '✓ 充币地址已成功复制！'
+                'copied-msg': '✓ 充币地址已成功复制！',
+                // 客服專員多語言國際化字段
+                'chat-title': 'Web3 IDEX 24h 官方客服',
+                'chat-placeholder': '請輸入您想諮詢的問題...',
+                'chat-send': '發送',
+                'chat-welcome': '👋 您好！我是 Web3 IDEX 去中心化交易所客服專員。請問您的充提幣或資產劃轉有什麼需要幫助的嗎？',
+                'chat-conn': '已安全連接至 Web3 IDEX 客服系統',
+                'chat-offline': '⚠️ 客服通道處於離線仿真模式',
+                'chat-auto-reply': '收到您的諮詢！我們的在線合規與財務專員正在為您處理，請稍候...'
             }
         };
 
@@ -256,6 +312,13 @@
                 const key = el.getAttribute('data-i18n');
                 if (i18nData[currentLang] && i18nData[currentLang][key]) {
                     el.innerText = i18nData[currentLang][key];
+                }
+            });
+
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+                const key = el.getAttribute('data-i18n-placeholder');
+                if (i18nData[currentLang] && i18nData[currentLang][key]) {
+                    el.placeholder = i18nData[currentLang][key];
                 }
             });
 
@@ -348,6 +411,93 @@
             }
             alert(dict['success-action']);
             closeActionModal();
+        }
+
+        // WebSocket 客服聊天系统（语言强隔离）
+        let supportWs = null;
+        function toggleSupportChat() {
+            const modal = document.getElementById('support-chat-modal');
+            modal.classList.toggle('hidden');
+            
+            if (!modal.classList.contains('hidden')) {
+                const container = document.getElementById('chat-messages');
+                // 打开时如果无消息，按当前选中的语言填充欢迎语
+                if (container.children.length === 0) {
+                    const dict = i18nData[currentLang];
+                    appendSupportMessage(dict['chat-welcome'], 'admin');
+                }
+                if (!supportWs) {
+                    initSupportWebSocket();
+                }
+            }
+        }
+
+        function initSupportWebSocket() {
+            const wsUrl = API_BASE_URL.replace('https://', 'wss://').replace('http://', 'ws://');
+            const dict = i18nData[currentLang];
+            try {
+                supportWs = new WebSocket(wsUrl);
+                supportWs.onopen = () => {
+                    appendSystemMessage(dict['chat-conn']);
+                };
+                supportWs.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        if (data && data.message) {
+                            appendSupportMessage(data.message, 'admin');
+                        }
+                    } catch (e) {
+                        appendSupportMessage(event.data, 'admin');
+                    }
+                };
+                supportWs.onerror = () => {
+                    appendSystemMessage(dict['chat-offline']);
+                };
+            } catch (e) {
+                appendSystemMessage(dict['chat-offline']);
+            }
+        }
+
+        function appendSupportMessage(text, sender) {
+            const container = document.getElementById('chat-messages');
+            const div = document.createElement('div');
+            if (sender === 'user') {
+                div.className = "flex justify-end";
+                div.innerHTML = `<div class="bg-idexCyan/20 border border-idexCyan/40 text-white p-2.5 rounded-lg max-w-[85%]">${text}</div>`;
+            } else {
+                div.className = "flex justify-start";
+                div.innerHTML = `<div class="bg-[#111] border border-gray-800 text-gray-300 p-2.5 rounded-lg max-w-[85%]">${text}</div>`;
+            }
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function appendSystemMessage(text) {
+            const container = document.getElementById('chat-messages');
+            const div = document.createElement('div');
+            div.className = "text-center text-[10px] text-gray-500 my-1 font-mono";
+            div.innerText = text;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function sendSupportMessage() {
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+            const dict = i18nData[currentLang];
+            if (!text) return;
+
+            appendSupportMessage(text, 'user');
+            input.value = '';
+
+            if (supportWs && supportWs.readyState === WebSocket.OPEN) {
+                supportWs.send(JSON.stringify({ type: 'support_chat', user: getCurrentUser() || 'Guest', text: text, lang: currentLang }));
+            } else {
+                // 离线自动回复严格匹配当前选择的语种
+                setTimeout(() => {
+                    appendSupportMessage(dict['chat-auto-reply'], 'admin');
+                }, 1000);
+            }
         }
 
         function getCurrentUser() { return localStorage.getItem('exchange_current_user') || null; }
